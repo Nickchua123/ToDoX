@@ -8,8 +8,15 @@ const router = express.Router();
 const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 phút
   max: 5,
-  message: "Quá nhiều lần đăng nhập thất bại, thử lại sau!",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res /* , next */) => {
+    return res.status(429).json({
+      message: "Quá nhiều lần đăng nhập thất bại, thử lại sau!",
+    });
+  },
 });
+
 
 router.post("/register", register);
 router.post("/login", loginLimiter, login);

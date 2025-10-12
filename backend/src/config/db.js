@@ -1,4 +1,7 @@
+// backend/src/config/db.js
 import mongoose from "mongoose";
+
+mongoose.set('sanitizeFilter', true); // sanitize filter on Mongoose queries
 
 export const connectDB = async () => {
   try {
