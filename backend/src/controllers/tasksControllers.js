@@ -1,13 +1,19 @@
+// backend/src/controllers/tasksControllers.js
 import Task from "../models/Task.js";
+
+const ALLOWED_FILTERS = ["today", "week", "month", "all"];
+const ALLOWED_STATUS = ["new", "active", "complete"];
 
 export const getAllTasks = async (req, res) => {
   const { filter = "today" } = req.query;
+  const safeFilter = ALLOWED_FILTERS.includes(filter) ? filter : "today";
+
   const now = new Date();
   let startDate;
 
-  switch (filter) {
+  switch (safeFilter) {
     case "today": {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // 2025-08-24 00:00
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // midnight today
       break;
     }
     case "week": {
@@ -53,9 +59,12 @@ export const getAllTasks = async (req, res) => {
 
 export const createTask = async (req, res) => {
   try {
-    const { title } = req.body;
-    const task = new Task({ title });
+    const title = String(req.body.title || "").trim();
+    if (!title) {
+      return res.status(400).json({ message: "Title không được để trống" });
+    }
 
+    const task = new Task({ title });
     const newTask = await task.save();
     res.status(201).json(newTask);
   } catch (error) {
@@ -67,13 +76,20 @@ export const createTask = async (req, res) => {
 export const updateTask = async (req, res) => {
   try {
     const { title, status, completedAt } = req.body;
+
+    // validate status if provided
+    if (status && !ALLOWED_STATUS.includes(status)) {
+      return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+    }
+
+    const update = {};
+    if (typeof title !== "undefined") update.title = String(title).trim();
+    if (typeof status !== "undefined") update.status = status;
+    if (typeof completedAt !== "undefined") update.completedAt = completedAt;
+
     const updatedTask = await Task.findByIdAndUpdate(
       req.params.id,
-      {
-        title,
-        status,
-        completedAt,
-      },
+      update,
       { new: true }
     );
 
