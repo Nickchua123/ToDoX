@@ -59,7 +59,7 @@ const HomePage = () => {
     setPage(newPage);
   };
 
-  // biến
+  // Derived
   const filteredTasks = taskBuffer.filter((task) => {
     switch (filter) {
       case "active":
@@ -144,3 +144,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
+

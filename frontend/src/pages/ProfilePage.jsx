@@ -33,12 +33,20 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-[#fefcff] flex flex-col items-center pt-20">
       <div className="bg-white shadow-md rounded-2xl p-6 w-full max-w-lg text-center">
         <h2 className="text-2xl font-bold mb-4">Thông tin cá nhân</h2>
-        <p><strong>Tên:</strong> {user.name}</p>
-        <p><strong>Email:</strong> {user.email}</p>
+        <p>
+          <strong>Tên:</strong> {user.name}
+        </p>
+        <p>
+          <strong>Email:</strong> {user.email}
+        </p>
 
         <div className="mt-6">
-          <p><strong>Công việc đang làm:</strong> {user.activeCount}</p>
-          <p><strong>Đã hoàn thành:</strong> {user.completeCount}</p>
+          <p>
+            <strong>Công việc đang làm:</strong> {user.activeCount}
+          </p>
+          <p>
+            <strong>Đã hoàn thành:</strong> {user.completeCount}
+          </p>
         </div>
 
         <button
@@ -53,3 +61,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+

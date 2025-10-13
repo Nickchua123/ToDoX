@@ -1,4 +1,3 @@
-// ...existing code...
 import axios from "axios";
 
 const api = axios.create({
@@ -9,22 +8,15 @@ const api = axios.create({
   xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
+// Global 401 handler: redirect to login (no refresh endpoint)
 api.interceptors.response.use(
   (res) => res,
-  async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true;
-      try {
-        await axios.post(`${api.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true });
-        return api(original);
-      } catch (e) {
-        window.location.href = "/login";
-      }
+  (err) => {
+    if (err.response?.status === 401) {
+      window.location.href = "/login";
     }
     return Promise.reject(err);
   }
 );
 
 export default api;
-// ...existing code...

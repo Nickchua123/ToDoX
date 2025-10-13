@@ -19,6 +19,9 @@ const app = express();
 const __dirname = path.resolve();
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === "production";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const isLocalDev = !isProd && /^http:\/\/localhost(?::\d+)?$/.test(FRONTEND_URL);
+const cookieSameSite = isLocalDev ? "lax" : "none";
 
 // ===== Middlewares (order matters) =====
 app.use(express.json()); // parse JSON body (must be before xss)
@@ -74,7 +77,7 @@ app.use(
 // CORS: allow frontend origin from env and allow cookies
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: FRONTEND_URL,
     credentials: true,
   })
 );
@@ -92,9 +95,9 @@ app.use("/api/auth/register", authLimiter);
 // CSRF setup: cookie-based token (client-readable XSRF cookie)
 const csrfProtection = csurf({
   cookie: {
-    httpOnly: false, // client JS must read this cookie to set header
-    sameSite: "strict",
-    secure: isProd,
+    httpOnly: false, // client JS may read this cookie
+    sameSite: cookieSameSite,
+    secure: isProd, // secure only in production (HTTPS)
   },
 });
 
@@ -103,7 +106,7 @@ app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
   const token = req.csrfToken();
   res.cookie("XSRF-TOKEN", token, {
     httpOnly: false,
-    sameSite: "strict",
+    sameSite: cookieSameSite,
     secure: isProd,
   });
   res.json({ csrfToken: token });

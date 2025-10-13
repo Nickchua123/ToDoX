@@ -66,6 +66,11 @@ const LoginPage = () => {
             Đăng ký ngay
           </a>
         </p>
+        <p className="text-center text-sm mt-2">
+          <a href="/forgot" className="text-primary hover:underline">
+            Quên mật khẩu?
+          </a>
+        </p>
       </div>
     </div>
   );

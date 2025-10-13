@@ -1,8 +1,9 @@
 // backend/src/controllers/tasksControllers.js
+import mongoose from "mongoose";
 import Task from "../models/Task.js";
 
 const ALLOWED_FILTERS = ["today", "week", "month", "all"];
-const ALLOWED_STATUS = ["new", "active", "complete"];
+const ALLOWED_STATUS = ["active", "complete"];
 
 export const getAllTasks = async (req, res) => {
   const { filter = "today" } = req.query;
@@ -32,7 +33,10 @@ export const getAllTasks = async (req, res) => {
     }
   }
 
-  const query = startDate ? { createdAt: { $gte: startDate } } : {};
+  const userId = new mongoose.Types.ObjectId(req.userId);
+  const query = startDate
+    ? { user: userId, createdAt: { $gte: startDate } }
+    : { user: userId };
 
   try {
     const result = await Task.aggregate([
@@ -64,7 +68,7 @@ export const createTask = async (req, res) => {
       return res.status(400).json({ message: "Title không được để trống" });
     }
 
-    const task = new Task({ title });
+    const task = new Task({ title, user: req.userId });
     const newTask = await task.save();
     res.status(201).json(newTask);
   } catch (error) {
@@ -87,8 +91,8 @@ export const updateTask = async (req, res) => {
     if (typeof status !== "undefined") update.status = status;
     if (typeof completedAt !== "undefined") update.completedAt = completedAt;
 
-    const updatedTask = await Task.findByIdAndUpdate(
-      req.params.id,
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: req.params.id, user: req.userId },
       update,
       { new: true }
     );
@@ -106,7 +110,7 @@ export const updateTask = async (req, res) => {
 
 export const deleteTask = async (req, res) => {
   try {
-    const deleteTask = await Task.findByIdAndDelete(req.params.id);
+    const deleteTask = await Task.findOneAndDelete({ _id: req.params.id, user: req.userId });
 
     if (!deleteTask) {
       return res.status(404).json({ message: "Nhiệm vụ không tồn tại" });
