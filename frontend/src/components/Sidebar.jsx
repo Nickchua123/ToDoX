@@ -238,8 +238,8 @@ export default function Sidebar() {
             onClick={() => {
               if (collapsed) toggleCollapsed();
             }}
-            title={collapsed ? "Mở thanh bên" : "ToDoX"}
-            aria-label={collapsed ? "Mở thanh bên" : "ToDoX"}
+            title={collapsed ? "Mở thanh bên" : "Flow"}
+            aria-label={collapsed ? "Mở thanh bên" : "Flow"}
             className={cn(
               "h-9 w-9 rounded-full grid place-items-center",
               collapsed
@@ -253,7 +253,7 @@ export default function Sidebar() {
           >
             <LayoutGrid size={18} />
           </button>
-          {!collapsed && <div className="font-semibold">ToDoX</div>}
+          {!collapsed && <div className="font-semibold">Flow</div>}
           <div className={cn("gap-2", collapsed ? "flex flex-col items-center" : "flex items-center")}>
             <button
               onClick={toggleTheme}

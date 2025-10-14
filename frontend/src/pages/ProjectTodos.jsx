@@ -94,8 +94,8 @@ const ProjectTodos = () => {
         setPomodoroTotal(0);
       }
     } catch (error) {
-      console.error("Lá»—i khi táº£i tasks:", error);
-      toast.error("KhÃ´ng thá»ƒ táº£i danh sÃ¡ch cÃ´ng viá»‡c.");
+      console.error("Lỗi khi tải tasks:", error);
+      toast.error("Không thể tải danh sách công việc.");
     }
   };
 
@@ -132,8 +132,8 @@ const ProjectTodos = () => {
       <div className="container relative z-10 pt-6 md:pt-8 mx-auto">
         <div className="w-full max-w-2xl p-4 md:p-6 mx-auto space-y-5 md:space-y-6">
           <div className="space-y-1 text-center">
-            <h1 className="text-3xl font-semibold">{projectName || "Dá»± Ã¡n"}</h1>
-            <p className="text-muted-foreground text-sm">CÃ´ng viá»‡c cho dá»± Ã¡n nÃ y</p>
+            <h1 className="text-3xl font-semibold">{projectName || "Dự án"}</h1>
+            <p className="text-muted-foreground text-sm">Công việc cho dự án này</p>
           </div>
 
           <AddTask handleNewTaskAdded={handleTaskChanged} projectId={projectId} compact />
@@ -171,3 +171,5 @@ const ProjectTodos = () => {
 };
 
 export default ProjectTodos;
+
+
