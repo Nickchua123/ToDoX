@@ -18,7 +18,7 @@ const TaskCard = ({ task, index, handleTaskChanged }) => {
       handleTaskChanged();
     } catch (error) {
       console.error("Lỗi xảy ra khi xoá task.", error);
-      toast.error("Lỗi xảy ra khi xoá nhiệm vụ mới.");
+      toast.error("Lỗi xảy ra khi xoá nhiệm vụ.");
     }
   };
 
@@ -28,11 +28,11 @@ const TaskCard = ({ task, index, handleTaskChanged }) => {
       await api.put(`/tasks/${task._id}`, {
         title: updateTaskTitle,
       });
-      toast.success(`Nhiệm vụ đã đổi thành ${updateTaskTitle}`);
+      toast.success(`Nhiệm vụ đã đổi thành "${updateTaskTitle}"`);
       handleTaskChanged();
     } catch (error) {
-      console.error("Lỗi xảy ra khi update task.", error);
-      toast.error("Lỗi xảy ra khi cập nhập nhiệm vụ.");
+      console.error("Lỗi xảy ra khi cập nhật task.", error);
+      toast.error("Lỗi xảy ra khi cập nhật nhiệm vụ.");
     }
   };
 
@@ -50,13 +50,13 @@ const TaskCard = ({ task, index, handleTaskChanged }) => {
           status: "active",
           completedAt: null,
         });
-        toast.success(`${task.title} đã đổi sang chưa hoàn thành.`);
+        toast.success(`${task.title} đã chuyển sang chưa hoàn thành.`);
       }
 
       handleTaskChanged();
     } catch (error) {
-      console.error("Lỗi xảy ra khi update task.", error);
-      toast.error("Lỗi xảy ra khi cập nhập nhiệm vụ.");
+      console.error("Lỗi xảy ra khi cập nhật task.", error);
+      toast.error("Lỗi xảy ra khi cập nhật nhiệm vụ.");
     }
   };
 
@@ -171,3 +171,4 @@ const TaskCard = ({ task, index, handleTaskChanged }) => {
 };
 
 export default TaskCard;
+

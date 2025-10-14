@@ -16,7 +16,7 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post("/auth/login", formData, { withCredentials: true });
+      await api.post("/auth/login", formData, { withCredentials: true });
       toast.success("Đăng nhập thành công!");
       navigate("/");
     } catch (error) {
@@ -77,3 +77,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

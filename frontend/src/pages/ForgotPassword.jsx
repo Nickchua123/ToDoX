@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 
@@ -10,6 +10,13 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      // Pre-check email existence (explicit UX)
+      const check = await api.post("/auth/check-email", { email });
+      if (!check.data?.exists) {
+        toast.error("Email chưa được đăng ký");
+        setLoading(false);
+        return;
+      }
       await api.post("/auth/forgot", { email });
       toast.success("Nếu email tồn tại, hướng dẫn đặt lại đã được gửi.");
     } catch (err) {
@@ -50,4 +57,3 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
-

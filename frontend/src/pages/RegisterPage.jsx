@@ -21,9 +21,12 @@ const RegisterPage = () => {
 
     setLoading(true);
     try {
-      await api.post("/auth/register", formData);
-      toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
-      navigate("/login");
+      await api.post("/auth/register/start", formData);
+      toast.success("Đã gửi mã xác thực đến email.");
+      try {
+        localStorage.setItem(`register:otp:last:${formData.email}`, String(Date.now()));
+      } catch {}
+      navigate(`/verify?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       toast.error(error.response?.data?.message || "Đăng ký thất bại!");
     } finally {
@@ -86,3 +89,4 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
+

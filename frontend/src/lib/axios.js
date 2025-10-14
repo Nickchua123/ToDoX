@@ -8,11 +8,26 @@ const api = axios.create({
   xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
-// Global 401 handler: redirect to login (no refresh endpoint)
+// Interceptors
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
+  async (err) => {
+    const status = err.response?.status;
+    const cfg = err.config || {};
+
+    // CSRF auto-retry once on 403
+    if (status === 403 && !cfg._retryCSRF && !cfg.url?.includes("/auth/csrf-token")) {
+      try {
+        cfg._retryCSRF = true;
+        await api.get("/auth/csrf-token");
+        return api(cfg);
+      } catch (_) {
+        // fallthrough
+      }
+    }
+
+    // 401 -> redirect to login
+    if (status === 401) {
       window.location.href = "/login";
     }
     return Promise.reject(err);

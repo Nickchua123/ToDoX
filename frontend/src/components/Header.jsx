@@ -8,8 +8,9 @@ export const Header = () => {
       </h1>
 
       <p className="text-muted-foreground">
-        Dám làm là đã thắng một nửa 🔥
+        Những việc nhỏ mỗi ngày tạo nên khác biệt.
       </p>
     </div>
   );
 };
+

@@ -8,6 +8,9 @@ import ProfilePage from "./pages/ProfilePage";
 import Unauthorized from "./pages/Unauthorized";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Layout from "./Layout";
+import VerifyCode from "./pages/VerifyCode";
+import ProjectsPage from "./pages/ProjectsPage";
 
 function App() {
   return (
@@ -15,14 +18,18 @@ function App() {
       <Toaster richColors />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot" element={<ForgotPassword />} />
-          <Route path="/reset" element={<ResetPassword />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route path="*" element={<NotFound />} />
+          <Route element={<Layout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot" element={<ForgotPassword />} />
+            <Route path="/reset" element={<ResetPassword />} />
+            <Route path="/verify" element={<VerifyCode />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </>

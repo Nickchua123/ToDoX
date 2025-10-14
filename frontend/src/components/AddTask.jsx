@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -6,13 +6,13 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 
-const AddTask = ({ handleNewTaskAdded }) => {
+const AddTask = ({ handleNewTaskAdded, projectId = null }) => {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const addTask = async () => {
     if (newTaskTitle.trim()) {
       try {
-        await api.post("/tasks", { title: newTaskTitle });
-        toast.success(`Nhiệm vụ ${newTaskTitle} đã được thêm vào.`);
+        await api.post("/tasks", { title: newTaskTitle, projectId });
+        toast.success(`Nhiệm vụ "${newTaskTitle}" đã được thêm.`);
         handleNewTaskAdded();
       } catch (error) {
         console.error("Lỗi xảy ra khi thêm task.", error);
@@ -59,3 +59,4 @@ const AddTask = ({ handleNewTaskAdded }) => {
 };
 
 export default AddTask;
+

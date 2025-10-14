@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/User.js";
 import Task from "../models/Task.js";
+import PendingRegistration from "../models/PendingRegistration.js";
 import { sendMail } from "../utils/mailer.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -23,34 +24,137 @@ const XSRF_COOKIE_OPTIONS = {
   secure: isProd,
 };
 
-export const register = async (req, res) => {
+// ========== Registration with email verification (OTP) ==========
+export const registerStart = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Vui lòng cung cấp tên, email và mật khẩu" });
     }
-
     const normalizedEmail = String(email).trim().toLowerCase();
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(400).json({ message: "Email đã tồn tại" });
 
-    const hashed = await bcrypt.hash(String(password), 10);
-    const newUser = await User.create({ name: String(name).trim(), email: normalizedEmail, password: hashed });
+    const now = new Date();
+    const existingPending = await PendingRegistration.findOne({ email: normalizedEmail });
+    if (existingPending && existingPending.lastSentAt && now - existingPending.lastSentAt < 60 * 1000) {
+      return res.status(429).json({ message: "Vui lòng đợi 60 giây trước khi gửi lại mã" });
+    }
+
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+    await PendingRegistration.findOneAndUpdate(
+      { email: normalizedEmail },
+      {
+        email: normalizedEmail,
+        name: String(name).trim(),
+        passwordHash,
+        codeHash,
+        expiresAt,
+        attempts: 0,
+        lastSentAt: now,
+      },
+      { upsert: true }
+    );
 
     try {
-      if (typeof req.csrfToken === "function") {
-        const xsrf = req.csrfToken();
-        res.cookie("XSRF-TOKEN", xsrf, XSRF_COOKIE_OPTIONS);
-      }
-    } catch {}
+      await sendMail({
+        to: normalizedEmail,
+        subject: "Mã xác thực đăng ký ToDoX",
+        text: `Mã xác thực của bạn là: ${code} (hết hạn sau 15 phút)`,
+        html: `<!doctype html><html><head><meta charset="UTF-8"/></head><body>
+               <p>Mã xác thực của bạn là:</p>
+               <div style="font-size:24px;font-weight:700;background:#f0f4ff;display:inline-block;padding:8px 12px;border-radius:8px;letter-spacing:2px;">${code}</div>
+               <p>Hết hạn sau 15 phút.</p>
+               </body></html>`,
+      });
+    } catch (mailErr) {
+      console.error("Failed to send verify email:", mailErr);
+      return res.status(500).json({ message: "Không gửi được email xác thực" });
+    }
 
-    res.status(201).json({ message: "Đăng ký thành công", userId: newUser._id });
+    return res.status(200).json({ message: "Đã gửi mã xác thực tới email" });
   } catch (err) {
-    res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
+    console.error(err);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
 
+export const registerVerify = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const safeCode = String(code || "").trim();
+    if (!normalizedEmail || !safeCode) return res.status(400).json({ message: "Thiếu email hoặc mã" });
+
+    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    if (!pending) return res.status(400).json({ message: "Không tìm thấy yêu cầu đăng ký" });
+    if (pending.expiresAt < new Date()) return res.status(400).json({ message: "Mã đã hết hạn" });
+    if (pending.attempts >= 5) return res.status(429).json({ message: "Quá số lần thử, vui lòng gửi lại mã", attemptsRemaining: 0 });
+
+    const codeHash = crypto.createHash("sha256").update(safeCode).digest("hex");
+    if (pending.codeHash !== codeHash) {
+      pending.attempts += 1;
+      await pending.save();
+      return res.status(400).json({ message: "Mã không chính xác", attemptsRemaining: Math.max(0, 5 - pending.attempts) });
+    }
+
+    const user = await User.create({ name: pending.name, email: normalizedEmail, password: pending.passwordHash });
+    await PendingRegistration.deleteOne({ _id: pending._id });
+    return res.status(201).json({ message: "Đăng ký thành công", userId: user._id });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const registerResend = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    if (!normalizedEmail) return res.status(400).json({ message: "Thiếu email" });
+
+    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
+    if (!pending) return res.status(400).json({ message: "Không tìm thấy yêu cầu đăng ký" });
+    const now = new Date();
+    if (pending.lastSentAt && now - pending.lastSentAt < 60 * 1000) {
+      return res.status(429).json({ message: "Vui lòng đợi 60 giây trước khi gửi lại mã" });
+    }
+
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+    pending.codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    pending.expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    pending.attempts = 0;
+    pending.lastSentAt = now;
+    await pending.save();
+
+    try {
+      await sendMail({
+        to: normalizedEmail,
+        subject: "Mã xác thực đăng ký ToDoX",
+        text: `Mã xác thực của bạn là: ${code} (hết hạn sau 15 phút)`,
+        html: `<!doctype html><html><head><meta charset="UTF-8"/></head><body>
+               <p>Mã xác thực của bạn là:</p>
+               <div style="font-size:24px;font-weight:700;background:#f0f4ff;display:inline-block;padding:8px 12px;border-radius:8px;letter-spacing:2px;">${code}</div>
+               <p>Hết hạn sau 15 phút.</p>
+               </body></html>`,
+      });
+    } catch (mailErr) {
+      console.error("Failed to resend verify email:", mailErr);
+      return res.status(500).json({ message: "Không gửi được email xác thực" });
+    }
+
+    return res.status(200).json({ message: "Đã gửi lại mã xác thực" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+// ========== Existing auth endpoints ==========
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -118,7 +222,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     const user = await User.findOne({ email: normalizedEmail });
-    // Đáp ứng giống nhau để tránh lộ diện email
+    // Trả lời giống nhau để tránh lộ diện email
     if (!user) {
       return res.status(200).json({ message: "Nếu email tồn tại, chúng tôi đã gửi hướng dẫn đặt lại." });
     }
@@ -131,22 +235,22 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = expires;
     await user.save();
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const resetUrl = `${frontendUrl}/reset?token=${rawToken}`;
+    const resetUrl = `${FRONTEND_URL}/reset?token=${rawToken}`;
 
-    // Gửi email đặt lại mật khẩu
     try {
       await sendMail({
         to: normalizedEmail,
         subject: "Đặt lại mật khẩu ToDoX",
         text: `Bạn đã yêu cầu đặt lại mật khẩu. Nhấn vào liên kết sau (hết hạn sau 15 phút): ${resetUrl}`,
-        html: `<p>Bạn đã yêu cầu đặt lại mật khẩu.</p>
+        html: `<!doctype html><html><head><meta charset="UTF-8"/></head><body>
+               <p>Bạn đã yêu cầu đặt lại mật khẩu.</p>
                <p><a href="${resetUrl}">Bấm vào đây để đặt lại</a> (hết hạn sau 15 phút).</p>
-               <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>`,
+               <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
+               </body></html>`,
       });
     } catch (mailErr) {
       console.error("Failed to send reset email:", mailErr);
-      // Vẫn trả 200 để tránh lộ diện email tồn tại
+      // vẫn trả 200 để tránh lộ diện email
     }
 
     return res.status(200).json({ message: "Nếu email tồn tại, chúng tôi đã gửi hướng dẫn đặt lại." });
@@ -185,6 +289,20 @@ export const resetPassword = async (req, res) => {
     return res.status(200).json({ message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập." });
   } catch (err) {
     console.error(err);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+// ========== Utility: check email existence (for UI pre-check) ==========
+export const checkEmail = async (req, res) => {
+  try {
+    const normalizedEmail = String(req.body?.email || "").trim().toLowerCase();
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Thiếu email" });
+    }
+    const exists = await User.exists({ email: normalizedEmail });
+    return res.status(200).json({ exists: !!exists });
+  } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

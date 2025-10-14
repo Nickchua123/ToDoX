@@ -17,19 +17,30 @@ const HomePage = () => {
   const [filter, setFilter] = useState("all");
   const [dateQuery, setDateQuery] = useState("today");
   const [page, setPage] = useState(1);
+  const [projects, setProjects] = useState([]);
+  const [projectId, setProjectId] = useState("");
 
   useEffect(() => {
     fetchTasks();
-  }, [dateQuery]);
+  }, [dateQuery, projectId]);
 
   useEffect(() => {
     setPage(1);
   }, [filter, dateQuery]);
 
-  // logic
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/projects");
+        setProjects(res.data);
+      } catch {}
+    })();
+  }, []);
+
   const fetchTasks = async () => {
     try {
-      const res = await api.get(`/tasks?filter=${dateQuery}`);
+      const pid = projectId ? `&projectId=${projectId}` : "";
+      const res = await api.get(`/tasks?filter=${dateQuery}${pid}`);
       setTaskBuffer(res.data.tasks);
       setActiveTaskCount(res.data.activeCount);
       setCompleteTaskCount(res.data.completeCount);
@@ -39,27 +50,11 @@ const HomePage = () => {
     }
   };
 
-  const handleTaskChanged = () => {
-    fetchTasks();
-  };
+  const handleTaskChanged = () => fetchTasks();
+  const handleNext = () => page < totalPages && setPage((p) => p + 1);
+  const handlePrev = () => page > 1 && setPage((p) => p - 1);
+  const handlePageChange = (newPage) => setPage(newPage);
 
-  const handleNext = () => {
-    if (page < totalPages) {
-      setPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (page > 1) {
-      setPage((prev) => prev - 1);
-    }
-  };
-
-  const handlePageChange = (newPage) => {
-    setPage(newPage);
-  };
-
-  // Derived
   const filteredTasks = taskBuffer.filter((task) => {
     switch (filter) {
       case "active":
@@ -76,33 +71,42 @@ const HomePage = () => {
     page * visibleTaskLimit
   );
 
-  if (visibleTasks.length === 0) {
-    handlePrev();
-  }
-
+  if (visibleTasks.length === 0 && page > 1) handlePrev();
   const totalPages = Math.ceil(filteredTasks.length / visibleTaskLimit);
 
   return (
     <div className="min-h-screen w-full bg-[#fefcff] relative">
-      {/* Dreamy Sky Pink Glow */}
       <div
         className="absolute inset-0 z-0"
         style={{
-          backgroundImage: `
-        radial-gradient(circle at 30% 70%, rgba(173, 216, 230, 0.35), transparent 60%),
-        radial-gradient(circle at 70% 30%, rgba(255, 182, 193, 0.4), transparent 60%)`,
+          backgroundImage:
+            "radial-gradient(circle at 30% 70%, rgba(173, 216, 230, 0.35), transparent 60%)," +
+            "radial-gradient(circle at 70% 30%, rgba(255, 182, 193, 0.4), transparent 60%)",
         }}
       />
-      {/* Your Content/Components */}
       <div className="container relative z-10 pt-8 mx-auto">
         <div className="w-full max-w-2xl p-6 mx-auto space-y-6">
-          {/* Đầu Trang */}
           <Header />
 
-          {/* Tạo Nhiệm Vụ */}
-          <AddTask handleNewTaskAdded={handleTaskChanged} />
+          {/* Chọn dự án */}
+          <div className="flex gap-2 items-center">
+            <label className="text-sm text-muted-foreground">Dự án</label>
+            <select
+              className="border rounded-lg p-2 flex-1"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+            >
+              <option value="">Tất cả</option>
+              {projects.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Thống Kê và Bộ lọc */}
+          <AddTask handleNewTaskAdded={handleTaskChanged} projectId={projectId || null} />
+
           <StatsAndFilters
             filter={filter}
             setFilter={setFilter}
@@ -110,14 +114,8 @@ const HomePage = () => {
             completedTasksCount={completeTaskCount}
           />
 
-          {/* Danh Sách Nhiệm Vụ */}
-          <TaskList
-            filteredTasks={visibleTasks}
-            filter={filter}
-            handleTaskChanged={handleTaskChanged}
-          />
+          <TaskList filteredTasks={visibleTasks} filter={filter} handleTaskChanged={handleTaskChanged} />
 
-          {/* Phân Trang và Lọc Theo Date */}
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <TaskListPagination
               handleNext={handleNext}
@@ -126,17 +124,10 @@ const HomePage = () => {
               page={page}
               totalPages={totalPages}
             />
-            <DateTimeFilter
-              dateQuery={dateQuery}
-              setDateQuery={setDateQuery}
-            />
+            <DateTimeFilter dateQuery={dateQuery} setDateQuery={setDateQuery} />
           </div>
 
-          {/* Chân Trang */}
-          <Footer
-            activeTasksCount={activeTaskCount}
-            completedTasksCount={completeTaskCount}
-          />
+          <Footer activeTasksCount={activeTaskCount} completedTasksCount={completeTaskCount} />
         </div>
       </div>
     </div>
