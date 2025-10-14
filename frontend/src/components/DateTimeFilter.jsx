@@ -23,7 +23,7 @@ const DateTimeFilter = ({ dateQuery, setDateQuery }) => {
     >
       <PopoverTrigger asChild>
         <Button
-          size="lg"
+          size="sm"
           variant="outline"
           role="combobox"
           aria-expanded={open}

@@ -7,10 +7,17 @@ import Task from "../models/Task.js";
 import PendingRegistration from "../models/PendingRegistration.js";
 import { sendMail } from "../utils/mailer.js";
 
+// Password strength policy: tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt
+const isStrongPassword = (pwd) => {
+  const s = String(pwd || "");
+  if (s.length < 8) return false;
+  return /[A-Z]/.test(s) && /\d/.test(s) && /[^A-Za-z0-9]/.test(s);
+};
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const isProd = process.env.NODE_ENV === "production";
-const isLocalDev = !isProd && /^http:\/\/localhost(?::\d+)?$/.test(FRONTEND_URL);
-const cookieSameSite = isLocalDev ? "lax" : "none";
+// Dev (kể cả IP LAN): dùng SameSite=lax để cookie hoạt động qua HTTP
+const cookieSameSite = isProd ? "none" : "lax";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -19,18 +26,22 @@ const COOKIE_OPTIONS = {
 };
 
 const XSRF_COOKIE_OPTIONS = {
-  httpOnly: false, // readable by client (axios sets header)
+  httpOnly: false,
   sameSite: cookieSameSite,
   secure: isProd,
 };
 
-// ========== Registration with email verification (OTP) ==========
+// ========== Đăng ký với mã xác thực qua email ==========
 export const registerStart = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body || {};
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Vui lòng cung cấp tên, email và mật khẩu" });
     }
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ message: "Mật khẩu yếu. Yêu cầu tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt" });
+    }
+
     const normalizedEmail = String(email).trim().toLowerCase();
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(400).json({ message: "Email đã tồn tại" });
@@ -44,7 +55,7 @@ export const registerStart = async (req, res) => {
     const passwordHash = await bcrypt.hash(String(password), 10);
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
     const codeHash = crypto.createHash("sha256").update(code).digest("hex");
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     await PendingRegistration.findOneAndUpdate(
       { email: normalizedEmail },
@@ -85,7 +96,7 @@ export const registerStart = async (req, res) => {
 
 export const registerVerify = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { email, code } = req.body || {};
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const safeCode = String(code || "").trim();
     if (!normalizedEmail || !safeCode) return res.status(400).json({ message: "Thiếu email hoặc mã" });
@@ -113,7 +124,7 @@ export const registerVerify = async (req, res) => {
 
 export const registerResend = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body || {};
     const normalizedEmail = String(email || "").trim().toLowerCase();
     if (!normalizedEmail) return res.status(400).json({ message: "Thiếu email" });
 
@@ -154,10 +165,10 @@ export const registerResend = async (req, res) => {
   }
 };
 
-// ========== Existing auth endpoints ==========
+// ========== Đăng nhập / hồ sơ / đăng xuất ==========
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ message: "Thiếu thông tin đăng nhập" });
 
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -213,9 +224,10 @@ export const logout = (req, res) => {
   res.status(200).json({ message: "Đã đăng xuất" });
 };
 
+// ========== Quên/đặt lại mật khẩu ==========
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body || {};
     const normalizedEmail = String(email || "").trim().toLowerCase();
     if (!normalizedEmail) {
       return res.status(400).json({ message: "Vui lòng nhập email" });
@@ -229,7 +241,7 @@ export const forgotPassword = async (req, res) => {
 
     const rawToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
 
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = expires;
@@ -242,9 +254,9 @@ export const forgotPassword = async (req, res) => {
         to: normalizedEmail,
         subject: "Đặt lại mật khẩu ToDoX",
         text: `Bạn đã yêu cầu đặt lại mật khẩu. Nhấn vào liên kết sau (hết hạn sau 15 phút): ${resetUrl}`,
-        html: `<!doctype html><html><head><meta charset="UTF-8"/></head><body>
+        html: `<!doctype html><html><head><meta charset=\"UTF-8\"/></head><body>
                <p>Bạn đã yêu cầu đặt lại mật khẩu.</p>
-               <p><a href="${resetUrl}">Bấm vào đây để đặt lại</a> (hết hạn sau 15 phút).</p>
+               <p><a href=\"${resetUrl}\">Bấm vào đây để đặt lại</a> (hết hạn sau 15 phút).</p>
                <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
                </body></html>`,
       });
@@ -262,12 +274,12 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { token, password } = req.body;
+    const { token, password } = req.body || {};
     if (!token || !password) {
       return res.status(400).json({ message: "Thiếu token hoặc mật khẩu mới" });
     }
-    if (String(password).length < 8) {
-      return res.status(400).json({ message: "Mật khẩu phải tối thiểu 8 ký tự" });
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ message: "Mật khẩu yếu. Yêu cầu tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt" });
     }
 
     const hashedToken = crypto.createHash("sha256").update(String(token)).digest("hex");
@@ -293,7 +305,7 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// ========== Utility: check email existence (for UI pre-check) ==========
+// ========== Tiện ích: kiểm tra tồn tại email (phục vụ UI) ==========
 export const checkEmail = async (req, res) => {
   try {
     const normalizedEmail = String(req.body?.email || "").trim().toLowerCase();
@@ -306,3 +318,4 @@ export const checkEmail = async (req, res) => {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
+

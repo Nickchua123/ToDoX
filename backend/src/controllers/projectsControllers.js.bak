@@ -1,0 +1,84 @@
+﻿import mongoose from "mongoose";
+import Project from "../models/Project.js";
+
+export const listProjects = async (req, res) => {
+  try {
+    const projects = await Project.find({ user: req.userId }).sort({ createdAt: -1 });
+    res.status(200).json(projects);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const createProject = async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    if (!name) return res.status(400).json({ message: "Tên dự án không được để trống" });
+    const project = await Project.create({ user: req.userId, name });
+    res.status(201).json(project);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "Dự án đã tồn tại" });
+    }
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const renameProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const name = String(req.body?.name || "").trim();
+    if (!name) return res.status(400).json({ message: "Tên dự án không được để trống" });
+    const updated = await Project.findOneAndUpdate({ _id: id, user: req.userId }, { name }, { new: true, runValidators: true });
+    if (!updated) return res.status(404).json({ message: "Không tìm thấy dự án" });
+    res.status(200).json(updated);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "Dự án đã tồn tại" });
+    }
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const deleted = await Project.findOneAndDelete({ _id: id, user: req.userId });
+    if (!deleted) return res.status(404).json({ message: "Không tìm thấy dự án" });
+    res.status(200).json(deleted);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const getProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const project = await Project.findOne({ _id: id, user: req.userId });
+    if (!project) return res.status(404).json({ message: "Không tìm thấy dự án" });
+    res.status(200).json(project);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const updateProjectMeta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const { description = "", notes = "" } = req.body || {};
+    const updated = await Project.findOneAndUpdate(
+      { _id: id, user: req.userId },
+      { description: String(description), notes: String(notes) },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Không tìm thấy dự án" });
+    res.status(200).json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+

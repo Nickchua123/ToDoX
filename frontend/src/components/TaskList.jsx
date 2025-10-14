@@ -2,13 +2,13 @@ import React from "react";
 import TaskEmptyState from "./TaskEmptyState";
 import TaskCard from "./TaskCard";
 
-const TaskList = ({ filteredTasks, filter, handleTaskChanged, pomodoroCounts = {} }) => {
+const TaskList = ({ filteredTasks, filter, handleTaskChanged, pomodoroCounts = {}, compact = false }) => {
   if (!filteredTasks || filteredTasks.length === 0) {
     return <TaskEmptyState filter={filter} />;
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 md:space-y-3">
       {filteredTasks.map((task, index) => (
         <TaskCard
           key={task._id ?? index}
@@ -16,6 +16,7 @@ const TaskList = ({ filteredTasks, filter, handleTaskChanged, pomodoroCounts = {
           index={index}
           handleTaskChanged={handleTaskChanged}
           pomodoroCount={pomodoroCounts[task._id] || 0}
+          compact={compact}
         />
       ))}
     </div>

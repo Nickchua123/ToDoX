@@ -15,6 +15,7 @@ import authRoute from "./routes/authRouters.js";
 import taskRoute from "./routes/tasksRouters.js";
 import projectRoute from "./routes/projectsRouters.js";
 import pomodoroRoute from "./routes/pomodoroRouters.js";
+import eventsRoute from "./routes/eventsRouters.js";
 import { connectDB } from "./config/db.js";
 
 const app = express();
@@ -25,8 +26,8 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === "production";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
-const isLocalDev = !isProd && /^http:\/\/localhost(?::\d+)?$/.test(FRONTEND_URL);
-const cookieSameSite = isLocalDev ? "lax" : "none";
+// In development over LAN/IP, set SameSite=lax to avoid browsers rejecting non-secure None cookies
+const cookieSameSite = isProd ? "none" : "lax";
 
 // Trust proxy (needed when behind reverse proxies for secure cookies)
 app.set("trust proxy", 1);
@@ -123,6 +124,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/projects", projectRoute);
 app.use("/api/pomodoro", pomodoroRoute);
+app.use("/api/events", eventsRoute);
 
 // ===== Serve frontend when in production =====
 if (isProd) {

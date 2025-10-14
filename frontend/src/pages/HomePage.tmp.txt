@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
-import AddTask from "@/components/AddTask";
+﻿import AddTask from "@/components/AddTask";
 import DateTimeFilter from "@/components/DateTimeFilter";
 import Footer from "@/components/Footer";
 import { Header } from "@/components/Header";
 import StatsAndFilters from "@/components/StatsAndFilters";
 import TaskList from "@/components/TaskList";
 import TaskListPagination from "@/components/TaskListPagination";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { visibleTaskLimit } from "@/lib/data";
@@ -17,26 +17,37 @@ const HomePage = () => {
   const [filter, setFilter] = useState("all");
   const [dateQuery, setDateQuery] = useState("today");
   const [page, setPage] = useState(1);
+  
   const [pomodoroCounts, setPomodoroCounts] = useState({});
   const [pomodoroTotal, setPomodoroTotal] = useState(0);
 
   useEffect(() => {
     fetchTasks();
-  }, [dateQuery]);
+  }, [dateQuery, projectId]);
 
   useEffect(() => {
     const handler = () => fetchTasks();
     window.addEventListener("tasks:refresh", handler);
     return () => window.removeEventListener("tasks:refresh", handler);
-  }, [dateQuery]);
+  }, [dateQuery, projectId]);
 
   useEffect(() => {
     setPage(1);
   }, [filter, dateQuery]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/projects");
+        setProjects(res.data);
+      } catch {}
+    })();
+  }, []);
+
   const fetchTasks = async () => {
     try {
-      const res = await api.get(`/tasks?filter=${dateQuery}`);
+      const pid = projectId ? `&projectId=${projectId}` : "";
+      const res = await api.get(`/tasks?filter=${dateQuery}${pid}`);
       setTaskBuffer(res.data.tasks);
       setActiveTaskCount(res.data.activeCount);
       setCompleteTaskCount(res.data.completeCount);
@@ -44,7 +55,7 @@ const HomePage = () => {
       if (ids) {
         const [countsRes, statsRes] = await Promise.all([
           api.get(`/pomodoro/task-counts?taskIds=${ids}&range=${dateQuery}`),
-          api.get(`/pomodoro/stats?range=${dateQuery}`),
+          api.get(`/pomodoro/stats?range=${dateQuery}${projectId ? `&projectId=${projectId}` : ""}`),
         ]);
         setPomodoroCounts(countsRes.data || {});
         setPomodoroTotal(statsRes.data?.focusCount || 0);
@@ -53,8 +64,8 @@ const HomePage = () => {
         setPomodoroTotal(0);
       }
     } catch (error) {
-      console.error("Lỗi khi tải tasks:", error);
-      toast.error("Không thể tải danh sách công việc.");
+      console.error("Lỗi xảy ra khi truy xuất tasks:", error);
+      toast.error("Lỗi xảy ra khi truy xuất tasks.");
     }
   };
 
@@ -78,6 +89,7 @@ const HomePage = () => {
     (page - 1) * visibleTaskLimit,
     page * visibleTaskLimit
   );
+
   if (visibleTasks.length === 0 && page > 1) handlePrev();
   const totalPages = Math.ceil(filteredTasks.length / visibleTaskLimit);
 
@@ -91,11 +103,28 @@ const HomePage = () => {
             "radial-gradient(circle at 70% 30%, rgba(255, 182, 193, 0.4), transparent 60%)",
         }}
       />
-      <div className="container relative z-10 pt-4 md:pt-6 mx-auto">
-        <div className="w-full max-w-2xl p-4 md:p-5 mx-auto space-y-4 md:space-y-5">
+      <div className="container relative z-10 pt-8 mx-auto">
+        <div className="w-full max-w-2xl p-6 mx-auto space-y-6">
           <Header />
 
-          <AddTask handleNewTaskAdded={handleTaskChanged} compact />
+          {/* Chọn dự án */}
+          <div className="flex gap-2 items-center">
+            <label className="text-sm text-muted-foreground">Dự án</label>
+            <select
+              className="border rounded-lg p-2 flex-1"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+            >
+              <option value="">Tất cả</option>
+              {projects.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <AddTask handleNewTaskAdded={handleTaskChanged} projectId={projectId || null} />
 
           <StatsAndFilters
             filter={filter}
@@ -105,13 +134,7 @@ const HomePage = () => {
             pomodoroCount={pomodoroTotal}
           />
 
-          <TaskList
-            filteredTasks={visibleTasks}
-            filter={filter}
-            handleTaskChanged={handleTaskChanged}
-            pomodoroCounts={pomodoroCounts}
-            compact
-          />
+          <TaskList filteredTasks={visibleTasks} filter={filter} handleTaskChanged={handleTaskChanged} pomodoroCounts={pomodoroCounts} />
 
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <TaskListPagination
@@ -124,10 +147,7 @@ const HomePage = () => {
             <DateTimeFilter dateQuery={dateQuery} setDateQuery={setDateQuery} />
           </div>
 
-          <Footer
-            activeTasksCount={activeTaskCount}
-            completedTasksCount={completeTaskCount}
-          />
+          <Footer activeTasksCount={activeTaskCount} completedTasksCount={completeTaskCount} />
         </div>
       </div>
     </div>
@@ -135,3 +155,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
+

@@ -40,7 +40,7 @@ const TaskListPagination = ({
   const pagesToShow = generatePages();
 
   return (
-    <div className="flex justify-center mt-4">
+    <div className="flex justify-center mt-2 md:mt-4">
       <Pagination>
         <PaginationContent>
           {/* Trước */}
