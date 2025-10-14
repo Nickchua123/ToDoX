@@ -18,7 +18,7 @@ const TaskEmptyState = ({ filter }) => {
 
           <p className="text-sm text-muted-foreground">
             {filter === "all"
-              ? "Thêm nhiệm vụ đầu tiên vào để bắt đầu!"
+              ? "Thêm nhiệm vụ đầu tiên để bắt đầu!"
               : `Chuyển sang "tất cả" để thấy những nhiệm vụ ${
                   filter === "active" ? "đã hoàn thành." : "đang làm."
                 }`}
@@ -30,3 +30,4 @@ const TaskEmptyState = ({ filter }) => {
 };
 
 export default TaskEmptyState;
+

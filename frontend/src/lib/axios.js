@@ -1,4 +1,3 @@
-// ...existing code...
 import axios from "axios";
 
 const api = axios.create({
@@ -9,22 +8,30 @@ const api = axios.create({
   xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
+// Interceptors
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true;
+    const status = err.response?.status;
+    const cfg = err.config || {};
+
+    // CSRF auto-retry once on 403
+    if (status === 403 && !cfg._retryCSRF && !cfg.url?.includes("/auth/csrf-token")) {
       try {
-        await axios.post(`${api.defaults.baseURL}/auth/refresh`, {}, { withCredentials: true });
-        return api(original);
-      } catch (e) {
-        window.location.href = "/login";
+        cfg._retryCSRF = true;
+        await api.get("/auth/csrf-token");
+        return api(cfg);
+      } catch (_) {
+        // fallthrough
       }
+    }
+
+    // 401 -> redirect to login
+    if (status === 401) {
+      window.location.href = "/login";
     }
     return Promise.reject(err);
   }
 );
 
 export default api;
-// ...existing code...

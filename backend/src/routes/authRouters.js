@@ -1,26 +1,48 @@
-import express from "express";
-import { register, login, profile, logout } from "../controllers/authControllers.js";
+﻿import express from "express";
+import { registerStart, registerVerify, registerResend, login, profile, logout, forgotPassword, resetPassword, checkEmail } from "../controllers/authControllers.js";
 import rateLimit from "express-rate-limit";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Giới hạn brute force login
+// Gi?i h?n brute force login/register
 const loginLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 phút
+  windowMs: 10 * 60 * 1000, // 10 ph�t
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res /* , next */) => {
+  handler: (req, res) => {
     return res.status(429).json({
-      message: "Quá nhiều lần đăng nhập thất bại, thử lại sau!",
+      message: "Qu� nhi?u l?n dang nh?p th?t b?i, th? l?i sau!",
     });
   },
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-router.post("/register", register);
+// Gi?i h?n forgot password d? tr�nh l?m d?ng
+const forgotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Registration with verification code
+router.post("/register/start", registerLimiter, registerStart);
+router.post("/register/verify", registerLimiter, registerVerify);
+router.post("/register/resend", registerLimiter, registerResend);
+router.post("/check-email", registerLimiter, checkEmail);
+
 router.post("/login", loginLimiter, login);
-router.get("/profile", profile);
+router.get("/profile", requireAuth, profile);
 router.post("/logout", logout);
+router.post("/forgot", forgotLimiter, forgotPassword);
+router.post("/reset", resetPassword);
 
 export default router;

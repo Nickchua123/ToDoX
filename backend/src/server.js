@@ -1,24 +1,36 @@
-import dotenv from "dotenv";
+﻿import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
 import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import xss from "xss-clean";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import csurf from "csurf";
-import rateLimit from "express-rate-limit";
 
 import authRoute from "./routes/authRouters.js";
 import taskRoute from "./routes/tasksRouters.js";
+import projectRoute from "./routes/projectsRouters.js";
+import pomodoroRoute from "./routes/pomodoroRouters.js";
+import eventsRoute from "./routes/eventsRouters.js";
 import { connectDB } from "./config/db.js";
 
 const app = express();
-const __dirname = path.resolve();
+// Proper dirname resolution for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === "production";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+// In development over LAN/IP, set SameSite=lax to avoid browsers rejecting non-secure None cookies
+const cookieSameSite = isProd ? "none" : "lax";
+
+// Trust proxy (needed when behind reverse proxies for secure cookies)
+app.set("trust proxy", 1);
 
 // ===== Middlewares (order matters) =====
 app.use(express.json()); // parse JSON body (must be before xss)
@@ -74,27 +86,19 @@ app.use(
 // CORS: allow frontend origin from env and allow cookies
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: FRONTEND_URL,
     credentials: true,
   })
 );
 
-// Rate limiter for auth endpoints (brute-force protection)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
+// Rate limiting is handled in authRouters.js per endpoint
 
 // CSRF setup: cookie-based token (client-readable XSRF cookie)
 const csrfProtection = csurf({
   cookie: {
-    httpOnly: false, // client JS must read this cookie to set header
-    sameSite: "strict",
-    secure: isProd,
+    httpOnly: false, // client JS may read this cookie
+    sameSite: cookieSameSite,
+    secure: isProd, // secure only in production (HTTPS)
   },
 });
 
@@ -103,7 +107,7 @@ app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
   const token = req.csrfToken();
   res.cookie("XSRF-TOKEN", token, {
     httpOnly: false,
-    sameSite: "strict",
+    sameSite: cookieSameSite,
     secure: isProd,
   });
   res.json({ csrfToken: token });
@@ -118,12 +122,16 @@ app.use("/api", (req, res, next) => {
 // ===== Routes =====
 app.use("/api/auth", authRoute);
 app.use("/api/tasks", taskRoute);
+app.use("/api/projects", projectRoute);
+app.use("/api/pomodoro", pomodoroRoute);
+app.use("/api/events", eventsRoute);
 
 // ===== Serve frontend when in production =====
 if (isProd) {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  const distPath = path.join(__dirname, "../../frontend/dist");
+  app.use(express.static(distPath));
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+    res.sendFile(path.join(distPath, "index.html"));
   });
 }
 
@@ -154,3 +162,9 @@ connectDB()
     console.error("Kết nối DB thất bại:", err);
     process.exit(1);
   });
+
+
+
+
+
+
