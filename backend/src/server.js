@@ -4,6 +4,7 @@ dotenv.config();
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import xss from "xss-clean";
@@ -53,7 +54,8 @@ app.use(
         ? {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'"],
-            styleSrc: ["'self'"],
+            // Allow inline styles in production to avoid breaking UI libraries (e.g., toasts)
+            styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:"],
             connectSrc: [
               "'self'",
@@ -126,9 +128,10 @@ app.use("/api/projects", projectRoute);
 app.use("/api/pomodoro", pomodoroRoute);
 app.use("/api/events", eventsRoute);
 
-// ===== Serve frontend when in production =====
-if (isProd) {
-  const distPath = path.join(__dirname, "../../frontend/dist");
+// ===== Serve frontend (also in dev if dist exists) =====
+const distPath = path.join(__dirname, "../../frontend/dist");
+const hasDist = fs.existsSync(distPath);
+if (isProd || hasDist) {
   app.use(express.static(distPath));
   app.get("*", (req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
