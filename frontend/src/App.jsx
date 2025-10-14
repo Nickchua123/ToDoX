@@ -11,6 +11,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Layout from "./Layout";
 import VerifyCode from "./pages/VerifyCode";
 import ProjectsPage from "./pages/ProjectsPage";
+import ProjectNotes from "./pages/ProjectNotes";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/reset" element={<ResetPassword />} />
             <Route path="/verify" element={<VerifyCode />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/:projectId/notes" element={<ProjectNotes />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />

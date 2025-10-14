@@ -14,6 +14,7 @@ import csurf from "csurf";
 import authRoute from "./routes/authRouters.js";
 import taskRoute from "./routes/tasksRouters.js";
 import projectRoute from "./routes/projectsRouters.js";
+import pomodoroRoute from "./routes/pomodoroRouters.js";
 import { connectDB } from "./config/db.js";
 
 const app = express();
@@ -121,6 +122,7 @@ app.use("/api", (req, res, next) => {
 app.use("/api/auth", authRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/projects", projectRoute);
+app.use("/api/pomodoro", pomodoroRoute);
 
 // ===== Serve frontend when in production =====
 if (isProd) {
@@ -158,4 +160,9 @@ connectDB()
     console.error("Kết nối DB thất bại:", err);
     process.exit(1);
   });
+
+
+
+
+
 

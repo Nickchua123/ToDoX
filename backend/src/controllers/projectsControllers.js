@@ -53,3 +53,32 @@ export const deleteProject = async (req, res) => {
   }
 };
 
+export const getProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const project = await Project.findOne({ _id: id, user: req.userId });
+    if (!project) return res.status(404).json({ message: "Không tìm thấy dự án" });
+    res.status(200).json(project);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const updateProjectMeta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const { description = "", notes = "" } = req.body || {};
+    const updated = await Project.findOneAndUpdate(
+      { _id: id, user: req.userId },
+      { description: String(description), notes: String(notes) },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Không tìm thấy dự án" });
+    res.status(200).json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+

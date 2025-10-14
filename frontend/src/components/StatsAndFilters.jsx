@@ -1,15 +1,10 @@
 import React from "react";
 import { Badge } from "./ui/badge";
 import { FilterType } from "@/lib/data";
-import { Filter } from "lucide-react";
+import { Filter, Timer } from "lucide-react";
 import { Button } from "./ui/button";
 
-const StatsAndFilters = ({
-  completedTasksCount = 0,
-  activeTasksCount = 0,
-  filter = "all",
-  setFilter,
-}) => {
+const StatsAndFilters = ({ completedTasksCount = 0, activeTasksCount = 0, pomodoroCount = 0, filter = "all", setFilter }) => {
   return (
     <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
       {/* phần thống kê */}
@@ -25,6 +20,9 @@ const StatsAndFilters = ({
           className="bg-white/50 text-success border-success/20"
         >
           {completedTasksCount} {FilterType.completed}
+        </Badge>
+        <Badge variant="secondary" className="bg-white/50 text-primary border-primary/20">
+          <Timer className="size-3" /> {pomodoroCount} Pomodoro
         </Badge>
       </div>
 

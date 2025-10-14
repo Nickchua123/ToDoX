@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 
@@ -75,7 +76,7 @@ const ProjectsPage = () => {
           disabled={loading}
           className="px-4 py-2 rounded-lg bg-primary text-white"
         >
-          ➕ Thêm
+          + Thêm
         </button>
       </div>
 
@@ -87,12 +88,9 @@ const ProjectsPage = () => {
               <div className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()}</div>
             </div>
             <div className="flex gap-2">
-              <button className="px-3 py-2 rounded-lg border" onClick={() => renameProject(p._id, p.name)}>
-                Đổi tên
-              </button>
-              <button className="px-3 py-2 rounded-lg border text-red-600" onClick={() => deleteProject(p._id)}>
-                Xóa
-              </button>
+              <Link className="px-3 py-2 rounded-lg border hover:bg-black/5" to={`/projects/${p._id}/notes`}>Ghi chú</Link>
+              <button className="px-3 py-2 rounded-lg border" onClick={() => renameProject(p._id, p.name)}>Đổi tên</button>
+              <button className="px-3 py-2 rounded-lg border text-red-600" onClick={() => deleteProject(p._id)}>Xóa</button>
             </div>
           </li>
         ))}

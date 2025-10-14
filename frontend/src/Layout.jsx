@@ -1,6 +1,8 @@
 import React from "react";
 import { Outlet, useLocation } from "react-router";
 import Sidebar from "@/components/Sidebar";
+import { PomodoroProvider } from "@/components/pomodoro/PomodoroContext";
+import PomodoroBar from "@/components/pomodoro/PomodoroBar";
 
 export default function Layout() {
   const location = useLocation();
@@ -14,14 +16,14 @@ export default function Layout() {
   ];
   const shouldHideSidebar = hideOnPaths.some((p) => location.pathname.startsWith(p));
   return (
-    <div className="min-h-screen w-full bg-[#fefcff] flex overflow-x-hidden">
-      {/* Sidebar (desktop) */}
-      {!shouldHideSidebar && <Sidebar />}
-
-      {/* Main content area */}
-      <div className="flex-1">
-        <Outlet />
+    <PomodoroProvider>
+      <div className="min-h-screen w-full bg-[#fefcff] flex overflow-x-hidden">
+        {!shouldHideSidebar && <Sidebar />}
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        {!shouldHideSidebar && <PomodoroBar />}
       </div>
-    </div>
+    </PomodoroProvider>
   );
 }

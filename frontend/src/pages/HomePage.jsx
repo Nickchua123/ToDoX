@@ -19,9 +19,17 @@ const HomePage = () => {
   const [page, setPage] = useState(1);
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
+  const [pomodoroCounts, setPomodoroCounts] = useState({});
+  const [pomodoroTotal, setPomodoroTotal] = useState(0);
 
   useEffect(() => {
     fetchTasks();
+  }, [dateQuery, projectId]);
+
+  useEffect(() => {
+    const handler = () => fetchTasks();
+    window.addEventListener("tasks:refresh", handler);
+    return () => window.removeEventListener("tasks:refresh", handler);
   }, [dateQuery, projectId]);
 
   useEffect(() => {
@@ -44,6 +52,18 @@ const HomePage = () => {
       setTaskBuffer(res.data.tasks);
       setActiveTaskCount(res.data.activeCount);
       setCompleteTaskCount(res.data.completeCount);
+      const ids = (res.data.tasks || []).map((t) => t._id).join(",");
+      if (ids) {
+        const [countsRes, statsRes] = await Promise.all([
+          api.get(`/pomodoro/task-counts?taskIds=${ids}&range=${dateQuery}`),
+          api.get(`/pomodoro/stats?range=${dateQuery}${projectId ? `&projectId=${projectId}` : ""}`),
+        ]);
+        setPomodoroCounts(countsRes.data || {});
+        setPomodoroTotal(statsRes.data?.focusCount || 0);
+      } else {
+        setPomodoroCounts({});
+        setPomodoroTotal(0);
+      }
     } catch (error) {
       console.error("Lỗi xảy ra khi truy xuất tasks:", error);
       toast.error("Lỗi xảy ra khi truy xuất tasks.");
@@ -112,9 +132,10 @@ const HomePage = () => {
             setFilter={setFilter}
             activeTasksCount={activeTaskCount}
             completedTasksCount={completeTaskCount}
+            pomodoroCount={pomodoroTotal}
           />
 
-          <TaskList filteredTasks={visibleTasks} filter={filter} handleTaskChanged={handleTaskChanged} />
+          <TaskList filteredTasks={visibleTasks} filter={filter} handleTaskChanged={handleTaskChanged} pomodoroCounts={pomodoroCounts} />
 
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <TaskListPagination
