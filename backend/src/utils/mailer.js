@@ -31,6 +31,35 @@ export function getTransporter() {
 
 export async function sendMail({ to, subject, text, html }) {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+
+  // Prefer HTTP API provider if available to avoid SMTP egress issues on PaaS
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    const payload = {
+      from: process.env.RESEND_FROM || from || "onboarding@resend.dev",
+      to,
+      subject,
+      html: html || (text ? `<pre>${String(text)}</pre>` : ""),
+      text: text || undefined,
+    };
+    const doFetch = typeof fetch === "function"
+      ? fetch
+      : (...args) => import("node-fetch").then(({ default: f }) => f(...args));
+    const res = await doFetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Resend API failed: ${res.status} ${body}`);
+    }
+    return res.json();
+  }
+
   const t = getTransporter();
   return t.sendMail({ from, to, subject, text, html });
 }
