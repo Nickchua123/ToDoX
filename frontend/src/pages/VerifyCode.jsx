@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
+import Turnstile from "@/components/Turnstile";
 
 const useQuery = () => new URLSearchParams(window.location.search);
 
@@ -12,6 +13,7 @@ const VerifyCode = () => {
   const [attemptsLeft, setAttemptsLeft] = useState(5);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [captcha, setCaptcha] = useState(null);
 
   useEffect(() => {
     const key = `register:otp:last:${email}`;
@@ -57,7 +59,9 @@ const VerifyCode = () => {
   const handleResend = async () => {
     setResending(true);
     try {
-      await api.post("/auth/register/resend", { email });
+      const payload = { email };
+      if (captcha) payload.turnstileToken = captcha;
+      await api.post("/auth/register/resend", payload);
       toast.success("Đã gửi lại mã xác thực");
       try {
         const key = `register:otp:last:${email}`;
@@ -108,10 +112,16 @@ const VerifyCode = () => {
         >
           {resending ? "Đang gửi lại..." : cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : "Gửi lại mã"}
         </button>
+        <div className="mt-4">
+          <Turnstile
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onToken={setCaptcha}
+            theme="auto"
+          />
+        </div>
       </div>
     </div>
   );
 };
 
 export default VerifyCode;
-

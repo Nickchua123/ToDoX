@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { useNavigate } from "react-router";
+import Turnstile from "@/components/Turnstile";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,7 +23,9 @@ const RegisterPage = () => {
 
     setLoading(true);
     try {
-      await api.post("/auth/register/start", formData);
+      const payload = { ...formData };
+      if (captcha) payload.turnstileToken = captcha;
+      await api.post("/auth/register/start", payload);
       toast.success("Đã gửi mã xác thực đến email.");
       try {
         localStorage.setItem(`register:otp:last:${formData.email}`, String(Date.now()));
@@ -77,6 +81,14 @@ const RegisterPage = () => {
           </button>
         </form>
 
+        <div className="mt-4">
+          <Turnstile
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onToken={setCaptcha}
+            theme="auto"
+          />
+        </div>
+
         <p className="text-center text-sm mt-4">
           Đã có tài khoản?{" "}
           <a href="/login" className="text-primary hover:underline">
@@ -89,4 +101,3 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
-

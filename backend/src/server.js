@@ -53,7 +53,7 @@ app.use(
       directives: isProd
         ? {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
             // Allow inline styles in production to avoid breaking UI libraries (e.g., toasts)
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:"],
@@ -62,10 +62,11 @@ app.use(
               process.env.FRONTEND_URL || "http://localhost:5173",
               process.env.API_URL || "http://localhost:5001",
             ],
+            frameSrc: ["'self'", "https://challenges.cloudflare.com"],
           }
         : {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:"],
             connectSrc: [
@@ -73,6 +74,7 @@ app.use(
               process.env.FRONTEND_URL || "http://localhost:5173",
               process.env.API_URL || "http://localhost:5001",
             ],
+            frameSrc: ["'self'", "https://challenges.cloudflare.com"],
           },
     },
     hsts: isProd
