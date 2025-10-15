@@ -38,7 +38,7 @@ const forgotLimiter = rateLimit({
 router.post("/register/start", registerLimiter, verifyTurnstile, registerStart);
 router.post("/register/verify", registerLimiter, registerVerify);
 router.post("/register/resend", registerLimiter, verifyTurnstile, registerResend);
-router.post("/check-email", registerLimiter, verifyTurnstile, checkEmail);
+router.post("/check-email", registerLimiter, checkEmail);
 
 router.post("/login", loginLimiter, verifyTurnstile, login);
 router.get("/profile", requireAuth, profile);

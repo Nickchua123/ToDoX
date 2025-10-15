@@ -12,10 +12,8 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Pre-check email existence (explicit UX)
-      const checkPayload = { email };
-      if (captcha) checkPayload.turnstileToken = captcha;
-      const check = await api.post("/auth/check-email", checkPayload);
+      // Pre-check email existence (explicit UX) – no CAPTCHA required here
+      const check = await api.post("/auth/check-email", { email });
       if (!check.data?.exists) {
         toast.error("Email chưa được đăng ký");
         setLoading(false);
