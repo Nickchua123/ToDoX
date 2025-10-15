@@ -11,6 +11,14 @@ import xss from "xss-clean";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import csurf from "csurf";
+import dns from "dns";
+
+// Prefer IPv4 first to avoid IPv6 SMTP/connectivity issues on some hosts
+try {
+  if (typeof dns.setDefaultResultOrder === "function") {
+    dns.setDefaultResultOrder("ipv4first");
+  }
+} catch {}
 
 import authRoute from "./routes/authRouters.js";
 import taskRoute from "./routes/tasksRouters.js";
