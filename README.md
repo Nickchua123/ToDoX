@@ -4,7 +4,7 @@ ToDoX: Ứng dụng quản lý công việc theo dự án, chia sẻ theo quyề
 
 Tính năng:
 Đăng ký xác thực email (OTP), đăng nhập, quên/đặt lại mật khẩu.
-Dự án: tạo/đổi tên/xóa; mô tả/ghi chú; chia sẻ theo quyền (owner/editor/viewer).
+Dự án: tạo/đổi tên/xóa; mô tả/ghi chú; chia sẻ theo quyền (editor/viewer).
 Công việc: thêm/sửa/trạng thái; phân theo dự án; thống kê Pomodoro.
 Realtime (SSE): tự cập nhật danh sách task khi có thành viên khác thao tác.
 Bảo mật: CSRF cookie, Helmet (CSP), rate limit, xss-clean, express-mongo-sanitize, JWT cookie.
