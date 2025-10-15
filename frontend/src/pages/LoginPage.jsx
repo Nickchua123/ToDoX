@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { useNavigate } from "react-router";
+import Turnstile from "@/components/Turnstile";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -16,7 +18,9 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/auth/login", formData, { withCredentials: true });
+      const payload = { ...formData };
+      if (captcha) payload.turnstileToken = captcha;
+      await api.post("/auth/login", payload, { withCredentials: true });
       toast.success("Đăng nhập thành công!");
       navigate("/");
     } catch (error) {
@@ -60,6 +64,14 @@ const LoginPage = () => {
           </button>
         </form>
 
+        <div className="mt-4">
+          <Turnstile
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onToken={setCaptcha}
+            theme="auto"
+          />
+        </div>
+
         <p className="text-center text-sm mt-4">
           Chưa có tài khoản?{" "}
           <a href="/register" className="text-primary hover:underline">
@@ -77,4 +89,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

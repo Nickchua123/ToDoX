@@ -1,9 +1,3 @@
-// backend/scripts/migrate-add-user-to-tasks.js
-// Usage:
-//   NODE_ENV=production node backend/scripts/migrate-add-user-to-tasks.js --userEmail you@example.com [--dry]
-//   or
-//   node backend/scripts/migrate-add-user-to-tasks.js --userId 6655abc... [--dry]
-
 import dotenv from "dotenv";
 dotenv.config();
 

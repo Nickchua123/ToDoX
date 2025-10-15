@@ -1,23 +1,29 @@
 ﻿import React, { useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
+import Turnstile from "@/components/Turnstile";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       // Pre-check email existence (explicit UX)
-      const check = await api.post("/auth/check-email", { email });
+      const checkPayload = { email };
+      if (captcha) checkPayload.turnstileToken = captcha;
+      const check = await api.post("/auth/check-email", checkPayload);
       if (!check.data?.exists) {
         toast.error("Email chưa được đăng ký");
         setLoading(false);
         return;
       }
-      await api.post("/auth/forgot", { email });
+      const payload = { email };
+      if (captcha) payload.turnstileToken = captcha;
+      await api.post("/auth/forgot", payload);
       toast.success("Nếu email tồn tại, hướng dẫn đặt lại đã được gửi.");
     } catch (err) {
       toast.error(err.response?.data?.message || "Gửi yêu cầu thất bại");
@@ -48,6 +54,14 @@ const ForgotPassword = () => {
             {loading ? "Đang gửi..." : "Gửi hướng dẫn đặt lại"}
           </button>
         </form>
+
+        <div className="mt-4">
+          <Turnstile
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onToken={setCaptcha}
+            theme="auto"
+          />
+        </div>
         <p className="text-center text-sm mt-4">
           <a href="/login" className="text-primary hover:underline">Quay lại đăng nhập</a>
         </p>
