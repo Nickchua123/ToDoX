@@ -35,6 +35,15 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === "production";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const API_URL = process.env.API_URL || `http://localhost:${PORT}`;
+
+// Allow multiple origins via env (comma-separated)
+// Prefer CORS_ORIGINS, then FRONTEND_URLS, then FRONTEND_URL
+const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URLS || FRONTEND_URL;
+const ALLOWED_ORIGINS = String(rawOrigins)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 // In development over LAN/IP, set SameSite=lax to avoid browsers rejecting non-secure None cookies
 const cookieSameSite = isProd ? "none" : "lax";
 
@@ -58,32 +67,20 @@ app.use(cookieParser()); // parse cookies (required by csurf)
 app.use(
   helmet({
     contentSecurityPolicy: {
-      directives: isProd
-        ? {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-            // Allow inline styles in production to avoid breaking UI libraries (e.g., toasts)
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:"],
-            connectSrc: [
-              "'self'",
-              process.env.FRONTEND_URL || "http://localhost:5173",
-              process.env.API_URL || "http://localhost:5001",
-            ],
-            frameSrc: ["'self'", "https://challenges.cloudflare.com"],
-          }
-        : {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:"],
-            connectSrc: [
-              "'self'",
-              process.env.FRONTEND_URL || "http://localhost:5173",
-              process.env.API_URL || "http://localhost:5001",
-            ],
-            frameSrc: ["'self'", "https://challenges.cloudflare.com"],
-          },
+      directives: (() => {
+        const connectSources = Array.from(
+          new Set(["'self'", ...ALLOWED_ORIGINS, FRONTEND_URL, API_URL].filter(Boolean))
+        );
+        const base = {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:"],
+          connectSrc: connectSources,
+          frameSrc: ["'self'", "https://challenges.cloudflare.com"],
+        };
+        return base;
+      })(),
     },
     hsts: isProd
       ? {
@@ -98,7 +95,11 @@ app.use(
 // CORS: allow frontend origin from env and allow cookies
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // non-browser or same-origin
+      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS: " + origin), false);
+    },
     credentials: true,
   })
 );
