@@ -1,22 +1,16 @@
-SMTP configuration for password reset emails
+Email delivery (Resend only)
 
-Required env vars in backend/.env:
+The application now sends email exclusively via Resend HTTP API. SMTP has been removed.
 
-- SMTP_HOST (e.g. smtp.gmail.com)
-- SMTP_PORT (587 for STARTTLS, 465 for SSL)
-- SMTP_USER (your SMTP username/email)
-- SMTP_PASS (your SMTP password or app password)
-- Optional SMTP_FROM (display From address)
+Backend environment variables:
+- `RESEND_API_KEY` (required)
+- `RESEND_FROM` (recommended), e.g. `Flow <no-reply@your-domain.com>`
+- `FRONTEND_URL` (used to generate password reset links)
 
-Gmail example:
-
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your.address@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM="ToDoX <your.address@gmail.com>"
+Setup steps:
+- Verify your sending domain in Resend (add DKIM DNS records as instructed).
+- Create a Production API key and set it as `RESEND_API_KEY`.
+- Set a verified sender in `RESEND_FROM`.
 
 Notes
-- Port 587 uses STARTTLS (secure=false then upgraded), port 465 uses SSL (secure=true).
-- After setting env vars, run `npm install` in backend to install nodemailer, then start the server.
-- The reset link will point to `${FRONTEND_URL}/reset?token=...`. Ensure FRONTEND_URL is set.
+- The reset link points to `${FRONTEND_URL}/reset?token=...`. Ensure `FRONTEND_URL` is set in production.
