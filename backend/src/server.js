@@ -44,6 +44,12 @@ const ALLOWED_ORIGINS = String(rawOrigins)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// Build a set including API_URL and FRONTEND_URL for convenience
+const allowedOriginSet = new Set([
+  ...ALLOWED_ORIGINS,
+  FRONTEND_URL,
+  API_URL,
+].filter(Boolean));
 // In development over LAN/IP, set SameSite=lax to avoid browsers rejecting non-secure None cookies
 const cookieSameSite = isProd ? "none" : "lax";
 
@@ -96,8 +102,12 @@ app.use(
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // non-browser or same-origin
-      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      // Non-browser requests or same-origin XHR without Origin header
+      if (!origin) return cb(null, true);
+      // Allow configured origins (including API_URL/FRONTEND_URL)
+      if (allowedOriginSet.has(origin)) return cb(null, true);
+      // In development, allow any localhost origin to simplify local testing
+      if (!isProd && /^https?:\/\/localhost(?::\d+)?$/.test(origin)) return cb(null, true);
       return cb(new Error("Not allowed by CORS: " + origin), false);
     },
     credentials: true,

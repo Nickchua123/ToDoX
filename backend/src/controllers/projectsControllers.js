@@ -1,6 +1,7 @@
 ﻿import mongoose from "mongoose";
 import Project from "../models/Project.js";
 import User from "../models/User.js";
+import { publish } from "../utils/sse.js";
 
 // Helper to validate ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -162,6 +163,14 @@ export const addMember = async (req, res) => {
       role: role === "editor" ? "editor" : "viewer",
     });
     await project.save();
+    try {
+      publish("project_members_changed", {
+        projectId: project._id,
+        memberId: memberUser._id,
+        action: "added",
+        role: role === "editor" ? "editor" : "viewer",
+      });
+    } catch {}
     res.status(201).json({
       user: { _id: memberUser._id, email: memberUser.email, name: memberUser.name },
       role: role === "editor" ? "editor" : "viewer",
@@ -186,6 +195,14 @@ export const updateMember = async (req, res) => {
     if (idx === -1) return res.status(404).json({ message: "Không tìm thấy thành viên" });
     project.members[idx].role = role === "editor" ? "editor" : "viewer";
     await project.save();
+    try {
+      publish("project_members_changed", {
+        projectId: project._id,
+        memberId,
+        action: "updated",
+        role: project.members[idx].role,
+      });
+    } catch {}
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ message: "Lỗi hệ thống" });
@@ -204,6 +221,13 @@ export const removeMember = async (req, res) => {
       (m) => String(m.user) !== String(memberId)
     );
     await project.save();
+    try {
+      publish("project_members_changed", {
+        projectId: project._id,
+        memberId,
+        action: "removed",
+      });
+    } catch {}
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ message: "Lỗi hệ thống" });
