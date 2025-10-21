@@ -89,6 +89,32 @@ export default function Sidebar() {
     fetchProjects();
   }, [fetchProjects]);
 
+  // Subscribe to SSE for project member changes to refresh lists in realtime
+  useEffect(() => {
+    try {
+      const base = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/?api$/, "");
+      const es = new EventSource(`${base}/api/events`, { withCredentials: true });
+      const onMembers = (ev) => {
+        try {
+          const data = JSON.parse(ev.data || "{}");
+          if (!data?.projectId) return;
+          // refresh projects list
+          fetchProjects();
+          // if editing this project, refresh members
+          if (editProject && String(editProject._id) === String(data.projectId)) {
+            api.get(`/projects/${editProject._id}/members`).then((res) => {
+              setMembers(Array.isArray(res.data) ? res.data : []);
+            }).catch(() => {});
+          }
+        } catch {}
+      };
+      es.addEventListener("project_members_changed", onMembers);
+      return () => {
+        try { es.removeEventListener("project_members_changed", onMembers); es.close(); } catch {}
+      };
+    } catch {}
+  }, []);
+
   // Add project dialog
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
@@ -134,6 +160,10 @@ export default function Sidebar() {
   const [members, setMembers] = useState([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("viewer");
+  // Queues to apply sharing changes on Save
+  const [pendingAdds, setPendingAdds] = useState([]); // [{ email, role }]
+  const [pendingRoleChanges, setPendingRoleChanges] = useState({}); // { memberId: role }
+  const [pendingRemovals, setPendingRemovals] = useState(new Set()); // Set(memberId)
   const openEdit = useCallback(async (p) => {
     setEditProject(p);
     setEditName(p?.name || "");
@@ -149,6 +179,10 @@ export default function Sidebar() {
     } catch {
       setMembers([]);
     }
+    // reset pending queues for members
+    setPendingAdds([]);
+    setPendingRoleChanges({});
+    setPendingRemovals(new Set());
     setEditOpen(true);
   }, []);
   const saveEdit = useCallback(async () => {
@@ -166,6 +200,33 @@ export default function Sidebar() {
         description: updated.description || "",
         notes: editNotes || "",
       });
+      // Apply queued member changes: adds -> role changes -> removals
+      for (const add of pendingAdds) {
+        try {
+          await api.post(`/projects/${editProject._id}/members`, { email: String(add.email).trim().toLowerCase(), role: add.role });
+        } catch (e) {
+          try { const { toast } = await import("sonner"); toast.error(e?.response?.data?.message || `Thêm ${add.email} thất bại`); } catch {}
+        }
+      }
+      for (const [memberId, role] of Object.entries(pendingRoleChanges)) {
+        try {
+          await api.put(`/projects/${editProject._id}/members/${memberId}`, { role });
+        } catch (e) {
+          try { const { toast } = await import("sonner"); toast.error(e?.response?.data?.message || `Cập nhật quyền thất bại`); } catch {}
+        }
+      }
+      for (const memberId of Array.from(pendingRemovals)) {
+        try {
+          await api.delete(`/projects/${editProject._id}/members/${memberId}`);
+        } catch (e) {
+          try { const { toast } = await import("sonner"); toast.error(e?.response?.data?.message || `Gỡ thành viên thất bại`); } catch {}
+        }
+      }
+      // Refresh members
+      try {
+        const resM2 = await api.get(`/projects/${editProject._id}/members`);
+        setMembers(Array.isArray(resM2.data) ? resM2.data : []);
+      } catch {}
       setProjects((prev) =>
         prev.map((it) => (it._id === updated._id ? { ...updated, notes: editNotes } : it))
       );
@@ -177,7 +238,7 @@ export default function Sidebar() {
     finally {
       setSavingEdit(false);
     }
-  }, [editProject, editName, editNotes]);
+  }, [editProject, editName, editNotes, pendingAdds, pendingRoleChanges, pendingRemovals]);
 
   // Delete project dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -513,6 +574,14 @@ export default function Sidebar() {
                   <button
                     onClick={async () => {
                       if (!editProject || !newMemberEmail.trim()) return;
+                      // Queue add and defer API to Save
+                      const email = newMemberEmail.trim();
+                      const role = newMemberRole;
+                      setPendingAdds((prev) => [...prev, { email, role }]);
+                      setMembers((prev) => [...prev, { email, role }]);
+                      setNewMemberEmail("");
+                      try { const { toast } = await import("sonner"); toast.success(`Đã thêm ${email} (chờ Lưu để áp dụng)`); } catch {}
+                      return;
                       try {
                         const res = await api.post(`/projects/${editProject._id}/members`, { email: newMemberEmail.trim(), role: newMemberRole });
                         setMembers((prev) => [...prev, res.data]);
@@ -541,7 +610,17 @@ export default function Sidebar() {
                         <select
                           value={m.role}
                           onChange={async (e) => {
-                            try {
+                            const newRole = e.target.value;
+                            const id = String(m.user?._id || m.user || "");
+                            const email = m.user?.email || m.email || "";
+                            setMembers((prev) => prev.map((x) => (String(x.user?._id || x.user) === id || (email && (x.user?.email || x.email) === email) ? { ...x, role: newRole } : x)));
+                            if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+                              setPendingAdds((prev) => prev.map((a) => (String(a.email).toLowerCase() === String(email).toLowerCase() ? { ...a, role: newRole } : a)));
+                            } else {
+                              setPendingRoleChanges((prev) => ({ ...prev, [id]: newRole }));
+                            }
+                            return;
+                          try {
                               await api.put(`/projects/${editProject._id}/members/${m.user?._id || m.user}`, { role: e.target.value });
                               setMembers((prev) => prev.map((x) => (String(x.user?._id || x.user) === String(m.user?._id || m.user) ? { ...x, role: e.target.value } : x)));
                               toast.success("Đã cập nhật quyền");
@@ -556,6 +635,21 @@ export default function Sidebar() {
                         </select>
                         <button
                           onClick={async () => {
+                            // Queue removal and defer API to Save
+                            const id = String(m.user?._id || m.user || "");
+                            const email = m.user?.email || m.email || "";
+                            if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+                              setPendingAdds((prev) => prev.filter((a) => String(a.email).toLowerCase() !== String(email).toLowerCase()));
+                            } else {
+                              setPendingRemovals((prev) => new Set([...Array.from(prev), id]));
+                            }
+                            setMembers((prev) => prev.filter((x) => {
+                              const xid = String(x.user?._id || x.user || "");
+                              const xmail = x.user?.email || x.email || "";
+                              return xid !== id && xmail !== email;
+                            }));
+                            try { const { toast } = await import("sonner"); toast.success("Đã đánh dấu gỡ (chờ Lưu)"); } catch {}
+                            return;
                             try {
                               await api.delete(`/projects/${editProject._id}/members/${m.user?._id || m.user}`);
                               setMembers((prev) => prev.filter((x) => String(x.user?._id || x.user) !== String(m.user?._id || m.user)));
@@ -752,3 +846,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+
