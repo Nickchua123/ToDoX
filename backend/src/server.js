@@ -91,7 +91,7 @@ app.use(
         const base = {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: isProd ? ["'self'"] : ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:"],
           connectSrc: connectSources,
           frameSrc: ["'self'", "https://challenges.cloudflare.com"],
