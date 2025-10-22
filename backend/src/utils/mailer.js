@@ -1,5 +1,5 @@
 // backend/src/utils/mailer.js
-// SMTP has been removed. Resend is the only supported provider.
+// Resend-only mailer. SMTP has been removed.
 
 export async function sendMail({ to, subject, text, html }) {
   const apiKey = process.env.RESEND_API_KEY;

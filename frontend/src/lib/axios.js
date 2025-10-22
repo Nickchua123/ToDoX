@@ -26,8 +26,26 @@ api.interceptors.response.use(
       }
     }
 
-    // 401 -> redirect to login
+    // 401 -> try refresh flow once, then redirect to login on failure
+    if (
+      status === 401 &&
+      !cfg._retryRefresh &&
+      !cfg.url?.includes("/auth/refresh") &&
+      !cfg.url?.includes("/auth/login")
+    ) {
+      try {
+        cfg._retryRefresh = true;
+        // Ensure CSRF token cookie/header is present for POST /auth/refresh
+        await api.get("/auth/csrf-token");
+        await api.post("/auth/refresh");
+        return api(cfg);
+      } catch (_) {
+        // fall through to redirect
+      }
+    }
+
     if (status === 401) {
+      try { sessionStorage.setItem("postLoginRedirect", window.location.pathname + window.location.search); } catch {}
       window.location.href = "/login";
     }
     return Promise.reject(err);

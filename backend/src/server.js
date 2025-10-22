@@ -1,6 +1,4 @@
 ﻿import dotenv from "dotenv";
-dotenv.config();
-
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,6 +11,10 @@ import helmet from "helmet";
 import csurf from "csurf";
 import dns from "dns";
 
+// Resolve dirname for ES modules and load .env from backend/.env explicitly
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 // Prefer IPv4 first to avoid IPv6 SMTP/connectivity issues on some hosts
 try {
   if (typeof dns.setDefaultResultOrder === "function") {
@@ -28,14 +30,23 @@ import eventsRoute from "./routes/eventsRouters.js";
 import { connectDB } from "./config/db.js";
 
 const app = express();
-// Proper dirname resolution for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === "production";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const API_URL = process.env.API_URL || `http://localhost:${PORT}`;
+// Fail-fast for required secrets/env to avoid vague 500s later
+if (!process.env.JWT_SECRET) {
+  console.error("[BOOT] Missing JWT_SECRET. Set it in backend/.env or deployment env.");
+  process.exit(1);
+}
+if (!process.env.MONGODB_CONNECTIONSTRING) {
+  console.error("[BOOT] Missing MONGODB_CONNECTIONSTRING. Set it in backend/.env or deployment env.");
+  process.exit(1);
+}
+if (!process.env.REFRESH_JWT_SECRET) {
+  console.warn("[BOOT] REFRESH_JWT_SECRET not set. Falling back to JWT_SECRET for refresh tokens.");
+}
 
 // Allow multiple origins via env (comma-separated)
 // Prefer CORS_ORIGINS, then FRONTEND_URLS, then FRONTEND_URL
@@ -80,7 +91,7 @@ app.use(
         const base = {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: isProd ? ["'self'"] : ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:"],
           connectSrc: connectSources,
           frameSrc: ["'self'", "https://challenges.cloudflare.com"],
@@ -142,7 +153,7 @@ app.use("/api", (req, res, next) => {
   return csrfProtection(req, res, next);
 });
 
-// ===== Routes =====
+// Public Routes
 app.use("/api/auth", authRoute);
 app.use("/api/tasks", taskRoute);
 app.use("/api/projects", projectRoute);
