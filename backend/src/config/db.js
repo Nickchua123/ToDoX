@@ -1,8 +1,9 @@
-// backend/src/config/db.js
 import mongoose from "mongoose";
 
-mongoose.set("sanitizeFilter", true); // sanitize filter on Mongoose queries
+// lệnh lọc an toàn cho mongoose
+mongoose.set("sanitizeFilter", true); 
 
+// kết nối CSDL MongoDB
 export const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_CONNECTIONSTRING);
