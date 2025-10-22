@@ -91,7 +91,9 @@ app.use(
         const base = {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-          styleSrc: isProd ? ["'self'"] : ["'self'", "'unsafe-inline'"],
+          // Allow inline styles to support UI libs that inject <style> (e.g., toasts)
+          // If you want stricter CSP later, switch to nonces/hashes for those libs
+          styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:"],
           connectSrc: connectSources,
           frameSrc: ["'self'", "https://challenges.cloudflare.com"],
