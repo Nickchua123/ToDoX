@@ -23,8 +23,9 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
-    "validator": "^13.11.0",
     "todox": "file:..",
+    "validator": "^13.11.0",
+    "xss": "^1.0.15",
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {

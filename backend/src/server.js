@@ -5,17 +5,17 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import xss from "xss-clean";
+import xss from "xss";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import csurf from "csurf";
 import dns from "dns";
 
-// Resolve dirname for ES modules and load .env from backend/.env explicitly
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-// Prefer IPv4 first to avoid IPv6 SMTP/connectivity issues on some hosts
+
 try {
   if (typeof dns.setDefaultResultOrder === "function") {
     dns.setDefaultResultOrder("ipv4first");
@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === "production";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const API_URL = process.env.API_URL || `http://localhost:${PORT}`;
-// Fail-fast for required secrets/env to avoid vague 500s later
+
 if (!process.env.JWT_SECRET) {
   console.error("[BOOT] Missing JWT_SECRET. Set it in backend/.env or deployment env.");
   process.exit(1);
@@ -48,39 +48,52 @@ if (!process.env.REFRESH_JWT_SECRET) {
   console.warn("[BOOT] REFRESH_JWT_SECRET not set. Falling back to JWT_SECRET for refresh tokens.");
 }
 
-// Allow multiple origins via env (comma-separated)
-// Prefer CORS_ORIGINS, then FRONTEND_URLS, then FRONTEND_URL
 const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URLS || FRONTEND_URL;
 const ALLOWED_ORIGINS = String(rawOrigins)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-// Build a set including API_URL and FRONTEND_URL for convenience
+
 const allowedOriginSet = new Set([
   ...ALLOWED_ORIGINS,
   FRONTEND_URL,
   API_URL,
 ].filter(Boolean));
-// In development over LAN/IP, set SameSite=lax to avoid browsers rejecting non-secure None cookies
+
 const cookieSameSite = isProd ? "none" : "lax";
 
-// Trust proxy (needed when behind reverse proxies for secure cookies)
+
 app.set("trust proxy", 1);
 
-// ===== Middlewares (order matters) =====
-app.use(express.json()); // parse JSON body (must be before xss)
-app.use(xss()); // sanitize input to mitigate XSS
+// Xss
+app.use(express.json());
+app.use((req, res, next) => {
+  if (req.body) {
+    for (const key in req.body) {
+      if (typeof req.body[key] === "string") {
+        req.body[key] = xss(req.body[key], {
+          whiteList: {},
+          stripIgnoreTag: true,
+          stripIgnoreTagBody: ['script', 'style', 'iframe'],
+          onTagAttr: (tag, name) => {
+            if (name.match(/^on/i)) return '';
+          },
+        });
+      }
+    }
+  }
+  next();
+});
 
-// protect against NoSQL injection - replace dangerous chars with '_'
 app.use(
   mongoSanitize({
-    replaceWith: "_", // replaces $ and . with '_' in keys
+    replaceWith: "_", 
   })
 );
 
-app.use(cookieParser()); // parse cookies (required by csurf)
+app.use(cookieParser()); 
 
-// Helmet: stricter CSP in production (avoid 'unsafe-inline' in prod)
+// Helmet
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -91,8 +104,6 @@ app.use(
         const base = {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-          // Allow inline styles to support UI libs that inject <style> (e.g., toasts)
-          // If you want stricter CSP later, switch to nonces/hashes for those libs
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:"],
           connectSrc: connectSources,
@@ -111,15 +122,12 @@ app.use(
   })
 );
 
-// CORS: allow frontend origin from env and allow cookies
+// CORS
 app.use(
   cors({
     origin: (origin, cb) => {
-      // Non-browser requests or same-origin XHR without Origin header
       if (!origin) return cb(null, true);
-      // Allow configured origins (including API_URL/FRONTEND_URL)
       if (allowedOriginSet.has(origin)) return cb(null, true);
-      // In development, allow any localhost origin to simplify local testing
       if (!isProd && /^https?:\/\/localhost(?::\d+)?$/.test(origin)) return cb(null, true);
       return cb(new Error("Not allowed by CORS: " + origin), false);
     },
@@ -127,18 +135,18 @@ app.use(
   })
 );
 
-// Rate limiting is handled in authRouters.js per endpoint
 
-// CSRF setup: cookie-based token (client-readable XSRF cookie)
+
+// CSRF setup
 const csrfProtection = csurf({
   cookie: {
-    httpOnly: false, // client JS may read this cookie
+    httpOnly: false, 
     sameSite: cookieSameSite,
-    secure: isProd, // secure only in production (HTTPS)
+    secure: isProd, 
   },
 });
 
-// Expose a token route that runs csrfProtection to generate token
+// CSRF
 app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
   const token = req.csrfToken();
   res.cookie("XSRF-TOKEN", token, {
@@ -149,7 +157,7 @@ app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
   res.json({ csrfToken: token });
 });
 
-// Apply CSRF protection only for state-changing requests under /api
+// Apply CSRF 
 app.use("/api", (req, res, next) => {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
   return csrfProtection(req, res, next);
