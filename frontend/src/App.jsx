@@ -18,6 +18,13 @@ import CategoryPage from "./pages/CategoryPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import ContactPage from "./pages/ContactPage";
 import NewsPage from "./pages/NewsPage";
+import AddressPage from "./pages/AddressPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import KycPage from "./pages/KycPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import OrderPage from "./pages/OrderPage";
+import PaymentPage from "./pages/PaymentPage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 function App() {
   return (
@@ -40,6 +47,13 @@ function App() {
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/news" element={<NewsPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/orders" element={<OrderPage />} />
+            <Route path="/account/address" element={<AddressPage />} />
+            <Route path="/account/payment" element={<PaymentPage />} />
+            <Route path="/account/privacy" element={<PrivacyPage />} />
+            <Route path="/account/kyc" element={<KycPage />} />
+            <Route path="/account/notifications" element={<NotificationsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
