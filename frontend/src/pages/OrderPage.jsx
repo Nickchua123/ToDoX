@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import SidebarUser from "@/components/SidebarUser";
 import OrderTabs from "@/components/OrderTabs";
 import OrderCard from "@/components/OrderCard";
@@ -13,25 +13,28 @@ export default function OrderPage() {
   }, [status]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white p-4 border-r">
-        <SidebarUser />
-      </aside>
-
-      {/* Main */}
-      <main className="flex-1 p-6">
-        <OrderTabs current={status} onChange={setStatus} />
-        <div className="mt-4">
-          {orders.length > 0 ? (
-            orders.map((order) => <OrderCard key={order._id} order={order} />)
-          ) : (
-            <div className="text-center text-gray-500 mt-12">
-              <p>Chưa có đơn hàng</p>
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="max-w-6xl mx-auto px-4 grid gap-6 lg:grid-cols-[260px_1fr]">
+        <aside>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <SidebarUser />
+          </div>
+        </aside>
+        <main>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            <OrderTabs current={status} onChange={setStatus} />
+            <div>
+              {orders.length > 0 ? (
+                orders.map((order) => <OrderCard key={order._id} order={order} />)
+              ) : (
+                <div className="text-center text-gray-500 mt-12">
+                  <p>Chưa có đơn hàng</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,3 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 const tabList = [
   { value: "all", label: "Tất cả" },
   { value: "pending", label: "Chờ xác nhận" },
@@ -12,18 +10,22 @@ const tabList = [
 
 export default function OrderTabs({ current, onChange }) {
   return (
-    <Tabs value={current} onValueChange={onChange}>
-      <TabsList className="flex justify-between bg-white shadow-sm border rounded-lg w-full">
+    <div className="border-b border-gray-200">
+      <div className="flex gap-8 text-sm font-medium text-gray-600">
         {tabList.map((tab) => (
-          <TabsTrigger
+          <button
             key={tab.value}
-            value={tab.value}
-            className="flex-1 py-3 text-sm font-medium hover:text-[#ff6347] data-[state=active]:text-[#ff6347] data-[state=active]:border-b-2 data-[state=active]:border-[#ff6347]"
+            onClick={() => onChange(tab.value)}
+            className={`relative pb-3 transition-all hover:text-[#ff6347] ${
+              current === tab.value
+                ? "text-[#ff6347] font-semibold after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-full after:h-[2px] after:bg-[#ff6347] after:rounded-full"
+                : ""
+            }`}
           >
             {tab.label}
-          </TabsTrigger>
+          </button>
         ))}
-      </TabsList>
-    </Tabs>
+      </div>
+    </div>
   );
 }
