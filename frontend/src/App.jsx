@@ -13,6 +13,11 @@ import VerifyCode from "./pages/VerifyCode";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectTodos from "./pages/ProjectTodos";
 import ProjectNotes from "./pages/ProjectNotes";
+import CartPage from "./pages/CartPage";
+import CategoryPage from "./pages/CategoryPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import ContactPage from "./pages/ContactPage";
+import NewsPage from "./pages/NewsPage";
 
 function App() {
   return (
@@ -30,6 +35,11 @@ function App() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:projectId" element={<ProjectTodos />} />
             <Route path="/projects/:projectId/notes" element={<ProjectNotes />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/category" element={<CategoryPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/news" element={<NewsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="*" element={<NotFound />} />
