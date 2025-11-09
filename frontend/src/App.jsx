@@ -1,5 +1,6 @@
 import { Toaster } from "sonner";
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import HomePage from "./pages/HomePage";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
@@ -26,7 +27,7 @@ import OrderPage from "./pages/OrderPage";
 import PaymentPage from "./pages/PaymentPage";
 import PrivacyPage from "./pages/PrivacyPage";
 
-function App() {
+export default function App() {
   return (
     <>
       <Toaster richColors />
@@ -63,5 +64,3 @@ function App() {
     </>
   );
 }
-
-export default App;

@@ -1,0 +1,112 @@
+// Ảnh demo; khi có CDN/ảnh của bạn, chỉ cần thay src.
+export const hero =
+  "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53?q=80&w=1200";
+
+export const categories = [
+  {
+    label: "ÁO NỮ",
+    img: "https://images.unsplash.com/photo-1520975682039-20db86a8824e?q=80&w=400",
+  },
+  {
+    label: "VÁY",
+    img: "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=400",
+  },
+  {
+    label: "ÁO NAM",
+    img: "https://images.unsplash.com/photo-1520975682039-20db86a8824e?q=80&w=400",
+  },
+  {
+    label: "SƠ MI",
+    img: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=400",
+  },
+  {
+    label: "QUẦN",
+    img: "https://images.unsplash.com/photo-1467043237213-65f2da53396f?q=80&w=400",
+  },
+  {
+    label: "ÁO KHOÁC",
+    img: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=400",
+  },
+  {
+    label: "GIÀY DÉP",
+    img: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?q=80&w=400",
+  },
+  {
+    label: "PHỤ KIỆN",
+    img: "https://images.unsplash.com/photo-1518544801976-3e188ea7c8e8?q=80&w=400",
+  },
+];
+
+export const coupons = [
+  {
+    badge: "FREE SHIP",
+    title: "Miễn phí vận chuyển",
+    sub: "Cho đơn hàng đầu tiên",
+  },
+  { badge: "Giảm giá", title: "Giảm 15%", sub: "Cho đơn từ 690k" },
+  { badge: "Giảm", title: "Giảm 25%", sub: "Cho đơn từ 1.049k" },
+  { badge: "Mua 1 + 1", title: "Ngẫu nhiên", sub: "Cho đơn từ 1.069k" },
+];
+
+export const products = Array.from({ length: 8 }).map((_, i) => ({
+  name: [
+    "Áo khoác dạ 2 lớp",
+    "Áo polo nam ND008",
+    "Váy liền dài phối màu",
+    "Áo nỉ nữ relax",
+    "Áo len cộc tay",
+    "Áo gilet cổ tim",
+    "Quần jeans crop",
+    "Quần suông nữ",
+  ][i],
+  price: [
+    "1.860.000đ",
+    "450.000đ",
+    "628.000đ",
+    "568.000đ",
+    "680.000đ",
+    "486.000đ",
+    "780.000đ",
+    "680.000đ",
+  ][i],
+  old: [
+    "2.080.000đ",
+    "600.000đ",
+    "680.000đ",
+    "656.000đ",
+    "",
+    "686.000đ",
+    "",
+    "860.000đ",
+  ][i],
+  tag: [7, 25, 28, 17, 0, 29, 0, 21][i],
+  img: `https://picsum.photos/seed/p${i + 1}/900/1200`,
+}));
+
+export const news = [
+  {
+    title: "SẮP RA MẮT: Bộ sưu tập Thu Đông 2024",
+    date: "18/11/2024",
+    author: "Nguyễn Anh Dũng",
+    img: "https://picsum.photos/seed/n1/600/400",
+  },
+  {
+    title: "5 món tối giản phụ nữ Pháp diện mãi không chán",
+    date: "18/11/2024",
+    author: "Nguyễn Anh Dũng",
+    img: "https://picsum.photos/seed/n2/120/90",
+    small: true,
+  },
+  {
+    title: "4 kiểu áo tối giản được phụ nữ Nhật Bản yêu thích",
+    date: "18/11/2024",
+    author: "Nguyễn Anh Dũng",
+    img: "https://picsum.photos/seed/n3/120/90",
+    small: true,
+  },
+];
+
+export const gallery = Array.from({ length: 8 }).map(
+  (_, i) => `https://picsum.photos/seed/g${i}/600/400`
+);
+
