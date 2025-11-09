@@ -1,36 +1,30 @@
-import React, { useEffect } from "react";
-import { Outlet, useLocation } from "react-router";
-import Sidebar from "@/components/Sidebar";
-import { PomodoroProvider } from "@/components/pomodoro/PomodoroContext";
-import PomodoroBar from "@/components/pomodoro/PomodoroBar";
-import api from "@/lib/axios";
+﻿import React from "react";
+import { Outlet, Link } from "react-router";
 
 export default function Layout() {
-  const location = useLocation();
-  const hideOnPaths = [
-    "/login",
-    "/register",
-    "/forgot",
-    "/reset",
-    "/verify",
-    "/unauthorized",
-  ];
-  const shouldHideSidebar = hideOnPaths.some((p) => location.pathname.startsWith(p));
-  // Auth guard: for protected pages, verify session; 401 will be redirected by axios interceptor
-  useEffect(() => {
-    if (!shouldHideSidebar) {
-      api.get("/auth/profile").catch(() => {});
-    }
-  }, [shouldHideSidebar, location.pathname]);
   return (
-    <PomodoroProvider>
-      <div className="min-h-screen w-full bg-[#fefcff] flex overflow-x-hidden">
-        {!shouldHideSidebar && <Sidebar />}
-        <div className="flex-1">
-          <Outlet />
-        </div>
-        {!shouldHideSidebar && <PomodoroBar />}
-      </div>
-    </PomodoroProvider>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b">
+        <nav className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3 text-sm">
+          <Link to="/" className="font-semibold text-lg text-brand-dark">
+            ND Shop
+          </Link>
+          <div className="flex items-center gap-6">
+            <Link to="/category" className="hover:text-brand-primary">
+              Category
+            </Link>
+            <Link to="/contact" className="hover:text-brand-primary">
+              Contact
+            </Link>
+            <Link to="/cart" className="hover:text-brand-primary">
+              Cart
+            </Link>
+          </div>
+        </nav>
+      </header>
+      <main className="flex-1">
+        <Outlet />
+      </main>
+    </div>
   );
 }
