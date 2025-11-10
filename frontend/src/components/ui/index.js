@@ -8,4 +8,4 @@ export { Separator } from "./separator";
 export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "./popover";
 export { Pagination, PaginationContent, PaginationLink, PaginationItem, PaginationPrevious, PaginationNext, PaginationEllipsis } from "./pagination";
 export { Badge, badgeVariants } from "./badge";
-
+export { Tabs, TabsList, TabsTrigger } from "./tabs";
