@@ -1,11 +1,11 @@
-const tabList = [
-  { value: "all", label: "Tất cả" },
-  { value: "pending", label: "Chờ xác nhận" },
-  { value: "shipping", label: "Vận chuyển" },
-  { value: "delivering", label: "Chờ giao hàng" },
-  { value: "completed", label: "Hoàn thành" },
-  { value: "cancelled", label: "Đã hủy" },
-  { value: "refund", label: "Trả hàng/Hoàn tiền" },
+﻿const tabList = [
+  { value: "all", label: "Táº¥t cáº£" },
+  { value: "pending", label: "Chá» xÃ¡c nháº­n" },
+  { value: "shipping", label: "Váº­n chuyá»ƒn" },
+  { value: "delivering", label: "Chá» giao hÃ ng" },
+  { value: "completed", label: "HoÃ n thÃ nh" },
+  { value: "cancelled", label: "ÄÃ£ há»§y" },
+  { value: "refund", label: "Tráº£ hÃ ng/HoÃ n tiá»n" },
 ];
 
 export default function OrderTabs({ current, onChange }) {
@@ -29,3 +29,4 @@ export default function OrderTabs({ current, onChange }) {
     </div>
   );
 }
+

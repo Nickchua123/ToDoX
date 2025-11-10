@@ -1,22 +1,22 @@
-﻿import { useState } from "react";
+﻿ï»¿import { useState } from "react";
 import { NavLink } from "react-router";
 import { Bell, User2, ClipboardList, Ticket, Coins, ChevronDown } from "lucide-react";
 
 const menu = [
-  { icon: <Bell className="w-4 h-4 text-[#ff6347]" />, label: "Thông báo", link: "/account/notifications" },
+  { icon: <Bell className="w-4 h-4 text-[#ff6347]" />, label: "ThÃ´ng bÃ¡o", link: "/account/notifications" },
   {
     icon: <User2 className="w-4 h-4 text-[#0070f3]" />,
-    label: "Tài khoản của tôi",
+    label: "TÃ i khoáº£n cá»§a tÃ´i",
     children: [
-      { label: "Hồ sơ", link: "/account/profile" },
-      { label: "Ngân hàng", link: "/account/bank" },
-      { label: "Địa chỉ", link: "/account/address" },
-      { label: "Đổi mật khẩu", link: "/account/password" },
-      { label: "Cài đặt thông báo", link: "/account/notifications" },
-      { label: "Riêng tư", link: "/account/privacy" },
+      { label: "Há»“ sÆ¡", link: "/account/profile" },
+      { label: "NgÃ¢n hÃ ng", link: "/account/bank" },
+      { label: "Äá»‹a chá»‰", link: "/account/address" },
+      { label: "Äá»•i máº­t kháº©u", link: "/account/password" },
+      { label: "CÃ i Ä‘áº·t thÃ´ng bÃ¡o", link: "/account/notifications" },
+      { label: "RiÃªng tÆ°", link: "/account/privacy" },
     ],
   },
-  { icon: <ClipboardList className="w-4 h-4 text-[#ff6347]" />, label: "Đơn mua", link: "/orders" },
+  { icon: <ClipboardList className="w-4 h-4 text-[#ff6347]" />, label: "ÄÆ¡n mua", link: "/orders" },
   { icon: <Ticket className="w-4 h-4 text-[#ff9800]" />, label: "Kho voucher", link: "/account/vouchers" },
   { icon: <Coins className="w-4 h-4 text-[#f9a825]" />, label: "Shopee Xu", link: "/account/xu" },
 ];
@@ -33,11 +33,11 @@ export default function SidebarUser() {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-800">xuangan2703...</p>
-            <button className="text-xs text-gray-400 hover:text-[#ff6347]">Sửa hồ sơ</button>
+            <button className="text-xs text-gray-400 hover:text-[#ff6347]">Sá»­a há»“ sÆ¡</button>
           </div>
         </div>
         <div className="space-y-1 text-xs text-gray-500">
-          <p>11.11 Sale khủng nhất năm</p>
+          <p>11.11 Sale khá»§ng nháº¥t nÄƒm</p>
           <p className="text-[#ff6347] font-semibold">New</p>
         </div>
       </div>
@@ -94,3 +94,4 @@ export default function SidebarUser() {
     </div>
   );
 }
+

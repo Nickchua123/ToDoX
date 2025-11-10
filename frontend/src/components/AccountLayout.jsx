@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿ï»¿import React from "react";
 import { Outlet } from "react-router";
 import SidebarUser from "@/components/SidebarUser";
 
@@ -20,3 +20,4 @@ export default function AccountLayout() {
     </div>
   );
 }
+
