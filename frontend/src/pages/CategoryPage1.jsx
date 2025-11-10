@@ -1,4 +1,4 @@
-// CategoryPage.jsx
+// CategoryPageMen.jsx — giống y cấu trúc CategoryPage.jsx (Nữ)
 import { useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +16,13 @@ import Footer from "@/components/Footer";
 import CategoryRound from "@/components/CategoryRound";
 import ProductCard from "@/components/ProductCard";
 
-// Dùng data nội bộ
+// Dùng data nội bộ (NAM)
 import {
-  womenCollection,
-  accessoriesFemale,
+  menCollection,
+  accessoriesMale,
   suggestionsToday,
   suggestionsBest,
-  categories, // mảng danh mục tròn
+  categories, // dùng lại mảng danh mục tròn
 } from "@/data/mock.js";
 
 // ---------- helpers ----------
@@ -32,20 +32,76 @@ const toNumber = (v) => {
   return Number(String(v).replace(/[^\d]/g, "")) || Number.POSITIVE_INFINITY;
 };
 
-export default function CategoryPage() {
+// bỏ dấu + thường hoá để so khớp chắc chắn
+const normalize = (s = "") =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+// bộ từ khoá loại NỮ (chặn sớm)
+const FEMALE_BLOCK = [
+  "nu",
+  "vay",
+  "dam",
+  "dam len",
+  "vay lien",
+  "vay ren",
+  "ao nu",
+  "ao nhi nu",
+  "ao len nu",
+  "chan vay",
+  "croptop",
+];
+
+// bộ từ khoá NAM (ít nhất 1 từ phải trúng)
+const MALE_REQUIRE = [
+  "nam",
+  "ao nam",
+  "so mi",
+  "jacket",
+  "ao khoac",
+  "quan",
+  "quan jean",
+  "quan au",
+  "short",
+  "that lung",
+  "belt",
+  "giay nam",
+];
+
+const looksFemale = (name = "", img = "") => {
+  const n = normalize(name);
+  const p = normalize(img || "");
+  const hitText = FEMALE_BLOCK.some((k) => n.includes(k));
+  const hitPath = /(women|nu|dress|skirt|dam|vay)/i.test(img || "");
+  return hitText || hitPath;
+};
+
+const looksMale = (name = "", img = "") => {
+  const n = normalize(name);
+  const p = normalize(img || "");
+  const hitText = MALE_REQUIRE.some((k) => n.includes(k));
+  const hitPath = /(men|nam|jacket|shirt|jean|belt)/i.test(img || "");
+  return hitText || hitPath;
+};
+
+export default function CategoryPageMen() {
   const [sort, setSort] = useState("default");
 
-  // Gom các sản phẩm "nữ"
-  const femaleProducts = useMemo(() => {
-    const base = [...(womenCollection || [])]; // 1..5
-    const femaleAcc = [...(accessoriesFemale || [])]; // 14..15
+  // Gom các sản phẩm "nam" — LỌC KỸ
+  const maleProducts = useMemo(() => {
+    // 1) Nguồn chắc chắn là Nam
+    const base = [...(menCollection || [])];
+    const maleAcc = [...(accessoriesMale || [])];
 
-    // Bổ sung thêm từ gợi ý nếu tên mang sắc thái "nữ"
-    const isFemaleName = (name = "") =>
-      /Nữ|Váy|Váy liền|Váy ren|Áo Nỉ Nữ|Áo dạ len|Áo gilet/i.test(name);
-
-    const extra = [...(suggestionsToday || []), ...(suggestionsBest || [])]
-      .filter((x) => isFemaleName(x.name))
+    // 2) Extra từ gợi ý: bắt buộc looksMale() và không được looksFemale()
+    const extraSrc = [...(suggestionsToday || []), ...(suggestionsBest || [])];
+    const extra = extraSrc
+      .filter(
+        (x) => !looksFemale(x.name, x.img) && looksMale(x.name, x.img) // strict
+      )
       .map((x, i) => ({
         id: x.id,
         name: x.name,
@@ -56,18 +112,20 @@ export default function CategoryPage() {
         _k: `extra-${i}`,
       }));
 
-    // Gộp + loại trùng (ưu tiên theo id, rồi số trong tên ảnh, rồi name)
-    const merged = [...base, ...femaleAcc, ...extra];
+    // 3) Gộp + loại trùng (ưu tiên id, rồi số trong tên ảnh, rồi name)
+    const merged = [...base, ...maleAcc, ...extra];
     const seen = new Set();
     const unique = [];
     for (const p of merged) {
       const key =
         (p.id && `id-${p.id}`) ||
         (typeof p.img === "string" &&
-          p.img.match(/\/(\d+)\.(webp|png|jpg)/)?.[1]) ||
+          p.img.match(/\/(\d+)\.(webp|png|jpg|jpeg|avif)/)?.[1]) ||
         p._k ||
         p.name;
       if (seen.has(key)) continue;
+      // chốt chặn cuối cùng: nếu tên/ảnh vẫn dính nữ thì bỏ
+      if (looksFemale(p.name, p.img)) continue;
       seen.add(key);
       unique.push(p);
     }
@@ -76,7 +134,7 @@ export default function CategoryPage() {
 
   // Sắp xếp
   const sortedProducts = useMemo(() => {
-    const arr = [...femaleProducts];
+    const arr = [...maleProducts];
     switch (sort) {
       case "az":
         return arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -89,7 +147,7 @@ export default function CategoryPage() {
       default:
         return arr;
     }
-  }, [femaleProducts, sort]);
+  }, [maleProducts, sort]);
 
   // ---------- Carousel danh mục ----------
   const railRef = useRef(null);
@@ -111,7 +169,7 @@ export default function CategoryPage() {
       {/* TIÊU ĐỀ + SẮP XẾP */}
       <div className="max-w-7xl mx-auto px-6 pt-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">Phụ kiện / Sản phẩm nữ</h1>
+          <h1 className="text-2xl font-semibold">Phụ kiện / Sản phẩm nam</h1>
 
           <div className="flex items-center gap-2 relative z-50">
             <span className="text-gray-700 text-sm font-medium">
@@ -148,9 +206,6 @@ export default function CategoryPage() {
           {/* Thanh kéo ngang */}
           <div
             ref={railRef}
-            // Nếu muốn ẩn thanh scrollbar mà không thêm CSS global,
-            // có thể dùng arbitrary styles của tailwind:
-            // className="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden ..."
             className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {(categories || []).map((c, i) => (
@@ -158,7 +213,7 @@ export default function CategoryPage() {
                 key={i}
                 ref={i === 0 ? firstItemRef : null}
                 className="snap-start shrink-0"
-                style={{ width: 180 }} // to hơn, khoảng 5 item/khung lớn
+                style={{ width: 180 }}
               >
                 <CategoryRound {...c} />
               </div>
@@ -193,9 +248,10 @@ export default function CategoryPage() {
               <h2 className="text-lg font-semibold mb-3">Danh mục sản phẩm</h2>
               <ul className="space-y-2 text-gray-700 text-sm">
                 <li className="cursor-pointer hover:text-pink-500">Tất cả</li>
-                <li className="cursor-pointer hover:text-pink-500">Túi nữ</li>
+                <li className="cursor-pointer hover:text-pink-500">Áo nam</li>
+                <li className="cursor-pointer hover:text-pink-500">Quần nam</li>
                 <li className="cursor-pointer hover:text-pink-500">
-                  Váy/Áo/Quần
+                  Phụ kiện nam
                 </li>
               </ul>
             </div>
@@ -223,26 +279,17 @@ export default function CategoryPage() {
             <div className="bg-white p-4 rounded-2xl shadow-sm border">
               <h2 className="text-lg font-semibold mb-3">Màu phổ biến</h2>
               <div className="flex flex-wrap gap-2">
-                {[
-                  "Kem",
-                  "Nâu",
-                  "Hồng",
-                  "Đen",
-                  "Cam",
-                  "Vàng",
-                  "Xanh dương",
-                  "Tím",
-                  "Xanh lá cây",
-                  "Xám",
-                ].map((color) => (
-                  <Badge
-                    key={color}
-                    variant="outline"
-                    className="cursor-pointer px-3 py-1 text-sm hover:bg-pink-50 hover:border-pink-400 transition-all"
-                  >
-                    {color}
-                  </Badge>
-                ))}
+                {["Đen", "Nâu", "Xanh dương", "Xám", "Trắng", "Be"].map(
+                  (color) => (
+                    <Badge
+                      key={color}
+                      variant="outline"
+                      className="cursor-pointer px-3 py-1 text-sm hover:bg-blue-50 hover:border-blue-400 transition-all"
+                    >
+                      {color}
+                    </Badge>
+                  )
+                )}
               </div>
             </div>
 
@@ -250,17 +297,15 @@ export default function CategoryPage() {
             <div className="bg-white p-4 rounded-2xl shadow-sm border">
               <h2 className="text-lg font-semibold mb-3">Size</h2>
               <div className="flex flex-wrap gap-2">
-                {["XS", "S", "M", "L", "XL", "2XL", "3XL", "Free Size"].map(
-                  (size) => (
-                    <Badge
-                      key={size}
-                      variant="outline"
-                      className="cursor-pointer px-3 py-1 text-sm hover:bg-pink-50 hover:border-pink-400 transition-all"
-                    >
-                      {size}
-                    </Badge>
-                  )
-                )}
+                {["S", "M", "L", "XL", "2XL"].map((size) => (
+                  <Badge
+                    key={size}
+                    variant="outline"
+                    className="cursor-pointer px-3 py-1 text-sm hover:bg-blue-50 hover:border-blue-400 transition-all"
+                  >
+                    {size}
+                  </Badge>
+                ))}
               </div>
             </div>
 
@@ -268,9 +313,15 @@ export default function CategoryPage() {
             <div className="bg-white p-4 rounded-2xl shadow-sm border">
               <h2 className="text-lg font-semibold mb-3">Kiểu dáng</h2>
               <div className="flex items-center space-x-2">
-                <Checkbox id="bag" />
-                <label htmlFor="bag" className="text-sm">
-                  Túi xách
+                <Checkbox id="belt" />
+                <label htmlFor="belt" className="text-sm">
+                  Thắt lưng
+                </label>
+              </div>
+              <div className="flex items-center space-x-2 mt-2">
+                <Checkbox id="jacket" />
+                <label htmlFor="jacket" className="text-sm">
+                  Áo khoác
                 </label>
               </div>
             </div>

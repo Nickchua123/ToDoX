@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState } from "react";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
@@ -24,12 +25,44 @@ import {
 } from "./data/mock.js";
 
 const asset = (p) => new URL(`./anhNNKB/${p}`, import.meta.url).href;
+=======
+﻿import { Toaster } from "sonner";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Layout from "./Layout";
+import MenList from "./pages/MenList"; // GIỮ vì ta sẽ thêm route /men
+import Home from "./pages/Home";
+import ProductDetail from "./pages/ProductDetail.jsx";
+import CategoryPage from "./pages/CategoryPage";
+import CategoryPage1 from "./pages/CategoryPage1";
+import FavoritesPage from "./pages/FavoritesPage";
+import ContactPage from "./pages/ContactPage";
+import NewsPage from "./pages/NewsPage";
+import NewsPage1 from "./pages/NewsPage1";
+import NewsPage2 from "./pages/NewsPage2";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderPage from "./pages/OrderPage";
+import AddressPage from "./pages/AddressPage";
+import PaymentPage from "./pages/PaymentPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import KycPage from "./pages/KycPage";
+import AccountLayout from "./components/AccountLayout";
+import AccountProfile from "./pages/AccountProfile";
+import AccountBank from "./pages/AccountBank";
+import AccountPassword from "./pages/AccountPassword";
+import AccountVouchers from "./pages/AccountVouchers";
+import AccountXu from "./pages/AccountXu";
+import NotFound from "./pages/NotFound";
+>>>>>>> Stashed changes
 
 export default function App() {
   const [tab, setTab] = useState("gia-tot");
   const [accTab, setAccTab] = useState("nam");
 
   return (
+<<<<<<< Updated upstream
     <div className="min-h-screen bg-white">
       <Header />
 
@@ -202,5 +235,44 @@ export default function App() {
 
       <Footer />
     </div>
+=======
+    <>
+      <Toaster richColors />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/men" element={<MenList />} /> {/* thêm */}
+            <Route path="/p/:id" element={<ProductDetail />} />{" "}
+            {/* GIỮ 1 lần */}
+            <Route path="/category" element={<CategoryPage />} />
+            <Route path="/category1" element={<CategoryPage1 />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/news" element={<NewsPage />}>
+              <Route index element={<NewsPage1 />} />
+              <Route path="2" element={<NewsPage2 />} />
+            </Route>
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/orders" element={<OrderPage />} />
+            <Route path="/account" element={<AccountLayout />}>
+              <Route path="profile" element={<AccountProfile />} />
+              <Route path="bank" element={<AccountBank />} />
+              <Route path="address" element={<AddressPage />} />
+              <Route path="password" element={<AccountPassword />} />
+              <Route path="payment" element={<PaymentPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
+              <Route path="kyc" element={<KycPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="vouchers" element={<AccountVouchers />} />
+              <Route path="xu" element={<AccountXu />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </>
+>>>>>>> Stashed changes
   );
 }
