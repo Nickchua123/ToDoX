@@ -1,9 +1,8 @@
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import validator from "validator";
 import crypto from "crypto";
 import User from "../models/User.js";
-import Task from "../models/Task.js";
 import PendingRegistration from "../models/PendingRegistration.js";
 import { sendMail } from "../utils/mailer.js";
 // Kiểm tra độ mạnh mật khẩu
@@ -99,7 +98,7 @@ export const registerVerify = async (req, res) => {
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const safeCode = String(code || "").trim();
     if (!normalizedEmail || !safeCode) return res.status(400).json({ message: "Thiếu email hoặc mã" });
-    if (!validator.isEmail(normalizedEmail)) return res.status(400).json({ message: "Invalid email" });
+    if (!validator.isEmail(normalizedEmail)) return res.status(400).json({ message: "Email không hợp lệ" });
     const pending = await PendingRegistration.findOne({ email: normalizedEmail });
     if (!pending) return res.status(400).json({ message: "Không tìm thấy yêu cầu đăng ký" });
     if (pending.expiresAt < new Date()) return res.status(400).json({ message: "Mã đã hết hạn" });
@@ -192,11 +191,7 @@ export const profile = async (req, res) => {
     }
     const user = await User.findById(userId).select("-password");
     if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
-    const [activeCount, completeCount] = await Promise.all([
-      Task.countDocuments({ user: userId, status: "active" }),
-      Task.countDocuments({ user: userId, status: "complete" }),
-    ]);
-    res.status(200).json({ ...user.toObject(), activeCount, completeCount });
+    res.status(200).json(user);
   } catch (err) {
     res.status(401).json({ message: "Token không hợp lệ" });
   }
@@ -310,3 +305,5 @@ export const refresh = async (req, res) => {
     return res.status(401).json({ message: "Refresh token không hợp lệ" });
   }
 };
+
+

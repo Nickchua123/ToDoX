@@ -1,12 +1,19 @@
-﻿ï»¿import { Toaster } from "sonner";
-import { BrowserRouter, Routes, Route } from "react-router";
+import React from "react";
+import { Toaster } from "sonner";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 
 import Layout from "./Layout";
-import MenList from "./pages/MenList";
+import MenList from "./pages/MenList"; // GIỮ vì ta sẽ thêm route /men
+import Home from "./pages/Home";
+import ProductDetail from "./pages/ProductDetail.jsx";
 import CategoryPage from "./pages/CategoryPage";
+import CategoryPage1 from "./pages/CategoryPage1";
 import FavoritesPage from "./pages/FavoritesPage";
 import ContactPage from "./pages/ContactPage";
 import NewsPage from "./pages/NewsPage";
+import NewsPage1 from "./pages/NewsPage1";
+import NewsPage2 from "./pages/NewsPage2";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderPage from "./pages/OrderPage";
@@ -30,11 +37,18 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/" element={<MenList />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/men" element={<MenList />} /> {/* thêm */}
+            <Route path="/p/:id" element={<ProductDetail />} />{" "}
+            {/* GIỮ 1 lần */}
             <Route path="/category" element={<CategoryPage />} />
+            <Route path="/category1" element={<CategoryPage1 />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/news" element={<NewsPage />} />
+            <Route path="/news" element={<NewsPage />}>
+              <Route index element={<NewsPage1 />} />
+              <Route path="2" element={<NewsPage2 />} />
+            </Route>
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/orders" element={<OrderPage />} />
@@ -57,7 +71,4 @@ export default function App() {
     </>
   );
 }
-
-
-
 

@@ -47,7 +47,6 @@ export default function Header() {
             {/* Tài khoản */}
             <Link to="/account" className="p-2 rounded-xl hover:bg-gray-100 flex flex-col items-center text-[11px] text-gray-600 hover:text-brand-primary transition" title="Tài khoản">
               <User className="w-5 h-5 mb-0.5" />
-              <span>Tài khoản</span>
             </Link>
           </div>
         </div>

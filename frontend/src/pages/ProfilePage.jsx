@@ -1,65 +1,64 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
+import api from "@/lib/axios";
+import { useNavigate } from "react-router";
 
-export default function ProfilePage(){
+const ProfilePage = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await api.get("/auth/profile", { withCredentials: true });
+      setUser(res.data);
+    } catch (error) {
+      toast.error("Bạn cần đăng nhập trước!");
+      navigate("/unauthorized");
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Đang tải thông tin...</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-4">Hồ Sơ Của Tôi</h2>
+    <div className="min-h-screen bg-[#fefcff] flex flex-col items-center pt-20">
+      <div className="bg-white shadow-md rounded-2xl p-6 w-full max-w-lg text-center">
+        <h2 className="text-2xl font-bold mb-4">Thông tin cá nhân</h2>
+        <p>
+          <strong>Tên:</strong> {user.name}
+        </p>
+        <p>
+          <strong>Email:</strong> {user.email}
+        </p>
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8 bg-white p-6 rounded-lg shadow">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <label className="w-28 text-gray-600">Tên đăng nhập</label>
-              <div className="text-gray-800 font-medium">xuangan27030108</div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="w-28 text-gray-600">Tên</label>
-              <input className="flex-1 border rounded px-3 py-2" defaultValue="Vũ Thị Tuyết" />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="w-28 text-gray-600">Email</label>
-              <div className="flex-1">xu*********@gmail.com <button className="text-sm text-primary ml-3">Thay Đổi</button></div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <label className="w-28 text-gray-600">Giới tính</label>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2"><input type="radio" name="g" defaultChecked/> Nữ</label>
-                <label className="flex items-center gap-2"><input type="radio" name="g" /> Nam</label>
-                <label className="flex items-center gap-2"><input type="radio" name="g" /> Khác</label>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="w-28 text-gray-600">Ngày sinh</label>
-              <div className="flex-1">**/**/1982 <button className="text-sm text-primary ml-3">Thay Đổi</button></div>
-            </div>
-
-            <div className="pt-2">
-              <button className="bg-primary text-white px-5 py-2 rounded shadow">Lưu</button>
-            </div>
-          </div>
+        <div className="mt-6">
+          <p>
+            <strong>Công việc đang làm:</strong> {user.activeCount}
+          </p>
+          <p>
+            <strong>Đã hoàn thành:</strong> {user.completeCount}
+          </p>
         </div>
 
-        <aside className="col-span-4">
-          <div className="bg-white p-6 rounded-lg shadow space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-green-700 text-white flex items-center justify-center font-bold text-xl">N</div>
-              <div>
-                <div className="font-medium">Vũ Thị Tuyết</div>
-                <div className="text-sm text-gray-500">(+84) 379 976 689</div>
-              </div>
-            </div>
-            <div>
-              <input type="file" className="hidden" id="avatar" />
-              <label htmlFor="avatar" className="inline-block border px-4 py-2 rounded cursor-pointer">Chọn Ảnh</label>
-              <p className="text-xs text-gray-400 mt-1">Dung lượng tối đa 1MB. Định dạng: JPEG, PNG.</p>
-            </div>
-          </div>
-        </aside>
+        <button
+          onClick={() => navigate("/")}
+          className="mt-6 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition"
+        >
+          Quay lại trang chính
+        </button>
       </div>
     </div>
   );
-}
+};
+
+export default ProfilePage;
+

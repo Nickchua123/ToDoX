@@ -1,4 +1,4 @@
-﻿ï»¿export default function AccountPassword() {
+export default function AccountPassword() {
   return (
     <div>
       <h2 className="text-xl font-semibold">Äá»•i máº­t kháº©u</h2>
