@@ -1,4 +1,4 @@
-﻿export default function AccountXu() {
+export default function AccountXu() {
   return (
     <div>
       <h2 className="text-xl font-semibold">Shopee Xu</h2>

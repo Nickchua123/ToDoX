@@ -1,6 +1,6 @@
 import React from "react";
 
-function Toggle({label, defaultOn=true}){
+function Toggle({ label, defaultOn = true }) {
   return (
     <div className="flex items-center justify-between py-3 border-b">
       <div>
@@ -9,7 +9,11 @@ function Toggle({label, defaultOn=true}){
       </div>
       <div>
         <label className="inline-flex relative items-center cursor-pointer">
-          <input type="checkbox" defaultChecked={defaultOn} className="sr-only peer" />
+          <input
+            type="checkbox"
+            defaultChecked={defaultOn}
+            className="sr-only peer"
+          />
           <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all relative"></div>
         </label>
       </div>
@@ -17,7 +21,7 @@ function Toggle({label, defaultOn=true}){
   );
 }
 
-export default function NotificationsPage(){
+export default function NotificationsPage() {
   return (
     <div>
       <h2 className="text-2xl font-semibold mb-4">Cài đặt Thông báo</h2>

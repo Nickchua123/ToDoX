@@ -1,4 +1,4 @@
-﻿export default function AccountPassword() {
+export default function AccountPassword() {
   return (
     <div>
       <h2 className="text-xl font-semibold">Đổi mật khẩu</h2>

@@ -23,10 +23,18 @@ try {
 } catch {}
 
 import authRoute from "./routes/authRouters.js";
-import taskRoute from "./routes/tasksRouters.js";
-import projectRoute from "./routes/projectsRouters.js";
-import pomodoroRoute from "./routes/pomodoroRouters.js";
-import eventsRoute from "./routes/eventsRouters.js";
+import productRoutes from "./routes/productRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import variantRoutes from "./routes/variantRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
+import addressRoutes from "./routes/addressRoutes.js";
+import couponRoutes from "./routes/couponRoutes.js";
+import bannerRoutes from "./routes/bannerRoutes.js";
+import newsRoutes from "./routes/newsRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 import { connectDB } from "./config/db.js";
 
 const app = express();
@@ -165,10 +173,18 @@ app.use("/api", (req, res, next) => {
 
 // Public Routes
 app.use("/api/auth", authRoute);
-app.use("/api/tasks", taskRoute);
-app.use("/api/projects", projectRoute);
-app.use("/api/pomodoro", pomodoroRoute);
-app.use("/api/events", eventsRoute);
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/variants", variantRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/addresses", addressRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/banners", bannerRoutes);
+app.use("/api/news", newsRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // ===== Serve frontend (also in dev if dist exists) =====
 const distPath = path.join(__dirname, "../../frontend/dist");
@@ -207,6 +223,7 @@ connectDB()
     console.error("Kết nối DB thất bại:", err);
     process.exit(1);
   });
+
 
 
 
