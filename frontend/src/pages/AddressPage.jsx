@@ -1,7 +1,7 @@
 import React from "react";
 
 const DemoAddress = {
-  name: "Vũ Thị Tuyết",
+  name: "VÅ© Thá»‹ Tuyáº¿t",
   phone: "(+84) 379 976 689",
   detail: "Cầu Cống Thóc - xóm 1, Xã Thụy Trình, Huyện Thái Thụy, Thái Bình",
 };
@@ -9,7 +9,7 @@ const DemoAddress = {
 export default function AddressPage() {
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">Địa chỉ của tôi</h2>
+      <h2 className="text-2xl font-semibold mb-4">Äá»‹a chá»‰ cá»§a tÃ´i</h2>
 
       <div className="bg-white p-6 rounded shadow">
         <div className="flex justify-between items-start">
@@ -44,3 +44,4 @@ export default function AddressPage() {
     </div>
   );
 }
+

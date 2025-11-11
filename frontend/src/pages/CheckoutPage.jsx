@@ -261,7 +261,7 @@ export default function CheckoutPage() {
                       className="bg-[#0b84a5] hover:brightness-95 text-white px-6 py-3 rounded-md shadow-md disabled:opacity-50"
                       disabled={!cart.length}
                     >
-                      ĐẶT HÀNG
+                      Äáº¶T HÃ€NG
                     </button>
                   </div>
 
@@ -279,3 +279,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+

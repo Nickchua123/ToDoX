@@ -1,4 +1,4 @@
-﻿const sample = [
+const sample = [
   { _id: "ORD-1001", status: "completed", items: [{}, {}], total: "1.250.000₫" },
   { _id: "ORD-1002", status: "shipping", items: [{}, {}, {}], total: "820.000₫" },
   { _id: "ORD-1003", status: "pending", items: [{}], total: "360.000₫" },

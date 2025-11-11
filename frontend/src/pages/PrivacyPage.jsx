@@ -3,7 +3,7 @@ import React from "react";
 export default function PrivacyPage() {
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">Những thiết lập riêng tư</h2>
+      <h2 className="text-2xl font-semibold mb-4">Nhá»¯ng thiáº¿t láº­p riÃªng tÆ°</h2>
 
       <div className="bg-white p-6 rounded shadow">
         <div className="flex justify-between items-center">
@@ -21,3 +21,4 @@ export default function PrivacyPage() {
     </div>
   );
 }
+

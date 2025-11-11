@@ -1,11 +1,11 @@
-import React from "react";
+﻿import React from "react";
 
 function Toggle({label, defaultOn=true}){
   return (
     <div className="flex items-center justify-between py-3 border-b">
       <div>
         <div className="font-medium">{label}</div>
-        <div className="text-sm text-gray-500">Mô tả nhỏ về cài đặt</div>
+        <div className="text-sm text-gray-500">MÃ´ táº£ nhá» vá» cÃ i Ä‘áº·t</div>
       </div>
       <div>
         <label className="inline-flex relative items-center cursor-pointer">
@@ -20,19 +20,19 @@ function Toggle({label, defaultOn=true}){
 export default function NotificationsPage(){
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">Cài đặt Thông báo</h2>
+      <h2 className="text-2xl font-semibold mb-4">CÃ i Ä‘áº·t ThÃ´ng bÃ¡o</h2>
 
       <div className="bg-white rounded shadow max-w-3xl overflow-hidden">
         <div className="p-6">
-          <h3 className="font-medium mb-3">Email thông báo</h3>
-          <Toggle label="Cập nhật đơn hàng" defaultOn={true} />
-          <Toggle label="Khuyến mãi" defaultOn={false} />
-          <Toggle label="Khảo sát" defaultOn={true} />
+          <h3 className="font-medium mb-3">Email thÃ´ng bÃ¡o</h3>
+          <Toggle label="Cáº­p nháº­t Ä‘Æ¡n hÃ ng" defaultOn={true} />
+          <Toggle label="Khuyáº¿n mÃ£i" defaultOn={false} />
+          <Toggle label="Kháº£o sÃ¡t" defaultOn={true} />
         </div>
 
         <div className="p-6 border-t">
-          <h3 className="font-medium mb-3">Thông báo SMS</h3>
-          <Toggle label="Khuyến mãi SMS" defaultOn={true} />
+          <h3 className="font-medium mb-3">ThÃ´ng bÃ¡o SMS</h3>
+          <Toggle label="Khuyáº¿n mÃ£i SMS" defaultOn={true} />
         </div>
       </div>
     </div>
