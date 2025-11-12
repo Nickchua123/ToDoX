@@ -1,121 +1,136 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
+  RefreshCw,
   Eye,
-  Receipt,
   Clock,
+  Receipt,
   Truck,
   CheckCircle2,
   XCircle,
   RotateCcw,
+  X,
+  MapPin,
+  User,
+  PhoneCall,
+  Package,
 } from "lucide-react";
+import api from "@/lib/axios";
+import { toast } from "sonner";
+import { prepareCsrfHeaders } from "@/lib/csrf";
 
-const Status = ({ s }) => {
-  const styles = {
-    pending: "bg-[#FF6A3D]/10 text-[#FF6A3D]",
-    processing: "bg-sky-50 text-sky-700",
-    shipped: "bg-indigo-50 text-indigo-700",
-    delivered: "bg-emerald-50 text-emerald-700",
-    cancelled: "bg-rose-50 text-rose-700",
-    refunded: "bg-slate-100 text-slate-700",
-  };
-  const Icon =
-    {
-      pending: Clock,
-      processing: Receipt,
-      shipped: Truck,
-      delivered: CheckCircle2,
-      cancelled: XCircle,
-      refunded: RotateCcw,
-    }[s] || Receipt;
+const PAGE_SIZE = 10;
+
+const statusMeta = {
+  pending: { label: "Chờ xác nhận", className: "bg-amber-50 text-amber-700", Icon: Clock },
+  processing: { label: "Đang xử lý", className: "bg-sky-50 text-sky-700", Icon: Receipt },
+  shipped: { label: "Đang giao", className: "bg-indigo-50 text-indigo-700", Icon: Truck },
+  delivered: { label: "Hoàn thành", className: "bg-emerald-50 text-emerald-700", Icon: CheckCircle2 },
+  cancelled: { label: "Đã hủy", className: "bg-rose-50 text-rose-700", Icon: XCircle },
+  refunded: { label: "Hoàn tiền", className: "bg-slate-100 text-slate-700", Icon: RotateCcw },
+};
+
+const StatusBadge = ({ value }) => {
+  const meta = statusMeta[value] || statusMeta.pending;
+  const Icon = meta.Icon;
   return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg ${styles[s]}`}
-    >
-      <Icon className="w-3 h-3" /> {s}
+    <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg ${meta.className}`}>
+      <Icon className="w-3 h-3" /> {meta.label || value}
     </span>
   );
 };
 
-function mock() {
-  const t = Date.now();
-  return [
-    {
-      _id: "ORD-240001",
-      user: { name: "Nguyễn An", email: "an@example.com" },
-      items: 3,
-      total: 1499000,
-      status: "pending",
-      createdAt: new Date(t - 1 * 864e5),
-    },
-    {
-      _id: "ORD-240002",
-      user: { name: "Trần Bình", email: "binh@example.com" },
-      items: 1,
-      total: 499000,
-      status: "processing",
-      createdAt: new Date(t - 2 * 864e5),
-    },
-    {
-      _id: "ORD-240003",
-      user: { name: "Lê Chi", email: "chi@example.com" },
-      items: 2,
-      total: 899000,
-      status: "shipped",
-      createdAt: new Date(t - 5 * 864e5),
-    },
-    {
-      _id: "ORD-240004",
-      user: { name: "Phạm Dũng", email: "dung@example.com" },
-      items: 5,
-      total: 2399000,
-      status: "delivered",
-      createdAt: new Date(t - 8 * 864e5),
-    },
-    {
-      _id: "ORD-240005",
-      user: { name: "Hoàng Em", email: "em@example.com" },
-      items: 1,
-      total: 199000,
-      status: "cancelled",
-      createdAt: new Date(t - 12 * 864e5),
-    },
-  ];
-}
-
 export default function OrdersAdmin() {
-  const all = useMemo(mock, []);
-  const [q, setQ] = useState("");
+  const [orders, setOrders] = useState([]);
   const [status, setStatus] = useState("all");
-  const [range, setRange] = useState("all");
+  const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [drawerOrderId, setDrawerOrderId] = useState(null);
+  const [orderDetail, setOrderDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const filtered = useMemo(() => {
-    const end = new Date();
-    const start =
-      range === "last7"
-        ? new Date(end.getTime() - 7 * 864e5)
-        : range === "last30"
-        ? new Date(end.getTime() - 30 * 864e5)
-        : null;
-    return all.filter((o) => {
-      const okQ =
-        q.trim() === "" ||
-        [o._id, o.user.name, o.user.email].some((v) =>
-          v.toLowerCase().includes(q.toLowerCase())
-        );
-      const okS = status === "all" || o.status === status;
-      const okD = !start || (o.createdAt >= start && o.createdAt <= end);
-      return okQ && okS && okD;
+  const fetchOrders = async ({ page: nextPage = page, nextStatus = status } = {}) => {
+    try {
+      setLoading(true);
+      setError("");
+      const params = new URLSearchParams();
+      params.set("limit", PAGE_SIZE);
+      params.set("page", nextPage);
+      if (nextStatus !== "all") params.set("status", nextStatus);
+      const { data } = await api.get(`/orders?${params.toString()}`);
+      setOrders(data?.items || []);
+      setTotal(data?.total || 0);
+      setPage(data?.page || nextPage);
+    } catch (err) {
+      const message = err?.response?.data?.message || "Không tải được đơn hàng";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders({ page: 1, nextStatus: status });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
+
+  const filteredOrders = useMemo(() => {
+    const keyword = q.trim().toLowerCase();
+    if (!keyword) return orders;
+    return orders.filter((o) => {
+      const fields = [o._id, o.user?.name, o.user?.email];
+      return fields.some((field) => String(field || "").toLowerCase().includes(keyword));
     });
-  }, [all, q, status, range]);
+  }, [orders, q]);
 
-  const total = filtered.length,
-    totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const current = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const formatCurrency = (value) => {
+    if (typeof value !== "number") return "—";
+    return value.toLocaleString("vi-VN") + "₫";
+  };
+
+  const openDrawer = async (orderId) => {
+    setDrawerOrderId(orderId);
+    setDetailLoading(true);
+    setOrderDetail(null);
+    try {
+      const { data } = await api.get(`/orders/${orderId}`);
+      setOrderDetail(data);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Không lấy được chi tiết đơn hàng");
+      setDrawerOrderId(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDrawer = () => {
+    if (updatingStatus) return;
+    setDrawerOrderId(null);
+    setOrderDetail(null);
+  };
+
+  const handleStatusUpdate = async (newStatus) => {
+    if (!orderDetail?._id || !newStatus || newStatus === orderDetail.status) return;
+    try {
+      setUpdatingStatus(true);
+      const headers = await prepareCsrfHeaders();
+      await api.patch(`/orders/${orderDetail._id}/status`, { status: newStatus }, { headers });
+      toast.success("Đã cập nhật trạng thái đơn hàng");
+      setOrderDetail((prev) => (prev ? { ...prev, status: newStatus } : prev));
+      fetchOrders({ page: 1, nextStatus: status });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Không cập nhật được trạng thái");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   return (
     <section className="space-y-4">
@@ -127,135 +142,239 @@ export default function OrdersAdmin() {
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Tìm ID / tên / email…"
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Tìm mã đơn, tên hoặc email…"
                 className="pl-9 pr-3 py-2 rounded-xl border border-slate-200 w-72 focus:outline-none focus:ring-2 focus:ring-[#FF6A3D]/40"
               />
             </div>
             <select
               value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setStatus(e.target.value)}
               className="px-3 py-2 rounded-xl border border-slate-200"
             >
               <option value="all">Tất cả trạng thái</option>
-              {[
-                "pending",
-                "processing",
-                "shipped",
-                "delivered",
-                "cancelled",
-                "refunded",
-              ].map((s) => (
+              {Object.keys(statusMeta).map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {statusMeta[s].label}
                 </option>
               ))}
             </select>
-            <select
-              value={range}
-              onChange={(e) => {
-                setRange(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 rounded-xl border border-slate-200"
+            <button
+              onClick={() => fetchOrders({ page: 1, nextStatus: status })}
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 border border-slate-200 text-sm text-slate-600 hover:bg-slate-50"
             >
-              <option value="all">Mọi thời gian</option>
-              <option value="last7">7 ngày gần đây</option>
-              <option value="last30">30 ngày gần đây</option>
-            </select>
+              <RefreshCw className="w-4 h-4" /> Tải lại
+            </button>
           </div>
         </div>
       </div>
 
       <div className="rounded-2xl bg-white shadow-[0_10px_30px_-10px_rgba(15,23,42,.12)]">
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500">
-                <th className="px-6 py-3">Mã đơn</th>
-                <th className="px-6 py-3">Khách hàng</th>
-                <th className="px-6 py-3">Số SP</th>
-                <th className="px-6 py-3">Tổng tiền</th>
-                <th className="px-6 py-3">Trạng thái</th>
-                <th className="px-6 py-3">Ngày tạo</th>
-                <th className="px-6 py-3 text-right">Chi tiết</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {current.map((o) => (
-                <tr key={o._id} className="hover:bg-slate-50/70">
-                  <td className="px-6 py-4 font-medium">{o._id}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span>{o.user.name}</span>
-                      <span className="text-xs text-slate-500">
-                        {o.user.email}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">{o.items}</td>
-                  <td className="px-6 py-4">{o.total.toLocaleString()}₫</td>
-                  <td className="px-6 py-4">
-                    <Status s={o.status} />
-                  </td>
-                  <td className="px-6 py-4">
-                    {new Date(o.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end">
-                      <button className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50">
-                        Xem
-                      </button>
-                    </div>
-                  </td>
+          {loading ? (
+            <div className="px-6 py-12 text-center text-slate-500">Đang tải dữ liệu...</div>
+          ) : error ? (
+            <div className="px-6 py-12 text-center text-rose-600">{error}</div>
+          ) : (
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="px-6 py-3">Mã đơn</th>
+                  <th className="px-6 py-3">Khách hàng</th>
+                  <th className="px-6 py-3">Số sản phẩm</th>
+                  <th className="px-6 py-3">Tổng tiền</th>
+                  <th className="px-6 py-3">Trạng thái</th>
+                  <th className="px-6 py-3">Ngày tạo</th>
+                  <th className="px-6 py-3 text-right">Chi tiết</th>
                 </tr>
-              ))}
-              {current.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-10 text-center text-slate-500"
-                  >
-                    Không có đơn hàng.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {filteredOrders.map((o) => (
+                  <tr key={o._id} className="hover:bg-slate-50/70">
+                    <td className="px-6 py-4 font-medium">{o._id}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span>{o.user?.name || "(Ẩn danh)"}</span>
+                        <span className="text-xs text-slate-500">{o.user?.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{o.items?.length || 0}</td>
+                    <td className="px-6 py-4">{formatCurrency(o.total)}</td>
+                    <td className="px-6 py-4">
+                      <StatusBadge value={o.status} />
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {o.createdAt ? new Date(o.createdAt).toLocaleString("vi-VN") : "—"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end">
+                        <button
+                          className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+                          type="button"
+                          onClick={() => openDrawer(o._id)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-10 text-center text-slate-500">
+                      Không có đơn hàng.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
-
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="text-xs text-slate-500">
-            Trang {page}/{Math.max(1, Math.ceil(total / 5))} • {total} đơn hàng
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 text-sm text-slate-600">
+          <span>
+            Trang {page}/{totalPages} — Tổng {total} đơn hàng
+          </span>
+          <div className="flex gap-2">
             <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 disabled:opacity-50"
-              disabled={page === 1}
+              onClick={() => page > 1 && fetchOrders({ page: page - 1, nextStatus: status })}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-50"
+              type="button"
             >
-              <ChevronLeft className="w-4 h-4" />
+              Trước
             </button>
             <button
-              onClick={() =>
-                setPage((p) =>
-                  Math.min(Math.max(1, Math.ceil(total / 5)), p + 1)
-                )
-              }
-              className="px-3 py-1.5 rounded-xl border border-slate-200 disabled:opacity-50"
-              disabled={page >= Math.max(1, Math.ceil(total / 5))}
+              onClick={() => page < totalPages && fetchOrders({ page: page + 1, nextStatus: status })}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-50"
+              type="button"
             >
-              <ChevronRight className="w-4 h-4" />
+              Sau
             </button>
           </div>
         </div>
       </div>
+
+      {drawerOrderId && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/30" onClick={closeDrawer} />
+          <div className="w-full max-w-xl bg-white h-full shadow-2xl overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div>
+                <p className="text-sm text-slate-500">Mã đơn</p>
+                <p className="text-lg font-semibold text-slate-900">{orderDetail?._id || drawerOrderId}</p>
+              </div>
+              <button onClick={closeDrawer} className="p-2 rounded-lg hover:bg-slate-100" type="button">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {detailLoading ? (
+              <div className="px-6 py-12 text-center text-slate-500">Đang tải chi tiết đơn hàng...</div>
+            ) : orderDetail ? (
+              <div className="px-6 py-6 space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-100 p-4">
+                    <h3 className="text-sm font-semibold text-slate-600 mb-3">Thông tin khách hàng</h3>
+                    <div className="space-y-2 text-sm text-slate-600">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-slate-400" />
+                        <span>{orderDetail.user?.name || "(Ẩn danh)"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <PhoneCall className="w-4 h-4 text-slate-400" />
+                        <span>{orderDetail.address?.phone || "—"}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-slate-400 mt-1" />
+                        <span>
+                          {orderDetail.address?.street || ""}
+                          {orderDetail.address?.ward ? `, ${orderDetail.address.ward}` : ""}
+                          {orderDetail.address?.district ? `, ${orderDetail.address.district}` : ""}
+                          {orderDetail.address?.province ? `, ${orderDetail.address.province}` : ""}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-600">Trạng thái</h3>
+                        <div className="mt-2">
+                          <StatusBadge value={orderDetail.status} />
+                        </div>
+                      </div>
+                      <select
+                        value={orderDetail.status}
+                        onChange={(e) => handleStatusUpdate(e.target.value)}
+                        disabled={updatingStatus}
+                        className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                      >
+                        {Object.keys(statusMeta).map((s) => (
+                          <option key={s} value={s}>
+                            {statusMeta[s].label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="mt-4 text-sm text-slate-600 space-y-1">
+                      <p>Ngày tạo: {orderDetail.createdAt ? new Date(orderDetail.createdAt).toLocaleString("vi-VN") : "—"}</p>
+                      {orderDetail.updatedAt && <p>Ngày cập nhật: {new Date(orderDetail.updatedAt).toLocaleString("vi-VN")}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <h3 className="text-sm font-semibold text-slate-600 mb-3">Sản phẩm</h3>
+                  <div className="space-y-3">
+                    {orderDetail.items?.map((item, idx) => (
+                      <div key={`${item.product}-${idx}`} className="flex gap-3 text-sm text-slate-700">
+                        <div className="rounded-xl bg-slate-100 p-2">
+                          <Package className="w-4 h-4 text-slate-500" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-900">{item.name || item.product?.name}</div>
+                          <div className="text-xs text-slate-500">SL: {item.quantity}</div>
+                        </div>
+                        <div className="text-right font-medium">{formatCurrency(item.price * item.quantity)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-700 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Tạm tính</span>
+                      <span>{formatCurrency(orderDetail.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Phí vận chuyển</span>
+                      <span>{formatCurrency(orderDetail.shippingFee)}</span>
+                    </div>
+                    {orderDetail.discount ? (
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Giảm giá</span>
+                        <span>-{formatCurrency(orderDetail.discount)}</span>
+                      </div>
+                    ) : null}
+                    <div className="flex justify-between font-semibold text-slate-900 text-base">
+                      <span>Tổng cộng</span>
+                      <span>{formatCurrency(orderDetail.total)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {orderDetail.notes ? (
+                  <div className="rounded-2xl border border-slate-100 p-4 bg-slate-50">
+                    <h3 className="text-sm font-semibold text-slate-600 mb-2">Ghi chú</h3>
+                    <p className="text-sm text-slate-700 whitespace-pre-line">{orderDetail.notes}</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="px-6 py-12 text-center text-slate-500">Không tìm thấy thông tin đơn hàng</div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

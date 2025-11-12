@@ -1,14 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { prepareCsrfHeaders } from "@/lib/csrf";
-
-const AuthContext = createContext({
-  user: null,
-  loading: true,
-  refreshAuth: async () => {},
-  logout: async () => {},
-});
+import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -19,12 +13,14 @@ export function AuthProvider({ children }) {
       setLoading(true);
       const { data } = await api.get("/auth/profile", { _skipAuthRedirect: true });
       setUser(data);
+      return data;
     } catch (err) {
       if (err?.response?.status === 401) {
         setUser(null);
       } else {
         toast.error(err?.response?.data?.message || "Không lấy được thông tin người dùng");
       }
+      return null;
     } finally {
       setLoading(false);
     }
@@ -38,7 +34,9 @@ export function AuthProvider({ children }) {
     try {
       const headers = await prepareCsrfHeaders();
       await api.post("/auth/logout", null, { headers, _skipAuthRedirect: true });
-    } catch {}
+    } catch (err) {
+      console.warn("Logout request failed", err);
+    }
     setUser(null);
   };
 
@@ -48,5 +46,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => useContext(AuthContext);

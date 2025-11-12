@@ -22,8 +22,8 @@ api.interceptors.response.use(
         cfg._retryCSRF = true;
         await api.get("/auth/csrf-token");
         return api(cfg);
-      } catch (_) {
-        // fallthrough
+      } catch (csrfErr) {
+        console.warn("CSRF retry failed", csrfErr);
       }
     }
 
@@ -41,13 +41,17 @@ api.interceptors.response.use(
         await api.get("/auth/csrf-token");
         await api.post("/auth/refresh");
         return api(cfg);
-      } catch (_) {
-        // fall through to redirect
+      } catch (refreshErr) {
+        console.warn("Refresh token attempt failed", refreshErr);
       }
     }
 
     if (status === 401 && !skipAuthRedirect) {
-      try { sessionStorage.setItem("postLoginRedirect", window.location.pathname + window.location.search); } catch {}
+      try {
+        sessionStorage.setItem("postLoginRedirect", window.location.pathname + window.location.search);
+      } catch (storageErr) {
+        console.warn("Không lưu được postLoginRedirect", storageErr);
+      }
       window.location.href = "/login";
     }
     return Promise.reject(err);

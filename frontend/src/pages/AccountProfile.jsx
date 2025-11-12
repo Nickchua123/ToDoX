@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useUpload } from "@/hooks/useUpload";
 import api from "@/lib/axios";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ export default function AccountProfile() {
     avatar: "",
   });
   const [saving, setSaving] = useState(false);
+  const { uploadFile, uploading } = useUpload();
 
   useEffect(() => {
     if (user) {
@@ -154,7 +156,7 @@ export default function AccountProfile() {
           <div className="pt-4">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || uploading}
               className="px-6 py-2.5 rounded-md bg-[#ff6347] text-white text-sm font-medium hover:bg-[#e45435] transition disabled:opacity-60"
             >
               {saving ? "Đang lưu..." : "Lưu"}
@@ -176,18 +178,21 @@ export default function AccountProfile() {
             </div>
           )}
           <label className="cursor-pointer inline-block border px-4 py-2 rounded-md text-sm bg-gray-50 hover:bg-gray-100">
-            Chọn Ảnh
+            {uploading ? "Đang tải..." : "Chọn Ảnh"}
             <input
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  const url = URL.createObjectURL(file);
-                  setFormData((p) => ({ ...p, avatar: url }));
+                  const url = await uploadFile(file);
+                  if (url) {
+                    setFormData((p) => ({ ...p, avatar: url }));
+                  }
                 }
               }}
+              disabled={uploading}
             />
           </label>
           <p className="text-xs text-gray-400 text-center">

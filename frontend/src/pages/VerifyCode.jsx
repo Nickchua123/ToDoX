@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import Turnstile from "@/components/Turnstile";
+import { prepareCsrfHeaders } from "@/lib/csrf";
 
 const useQuery = () => new URLSearchParams(window.location.search);
 
@@ -22,7 +23,9 @@ const VerifyCode = () => {
       const now = Date.now();
       const remain = Math.max(0, 60 - Math.floor((now - last) / 1000));
       setCooldown(remain);
-    } catch {}
+    } catch (storageErr) {
+      console.warn("Không đọc được timestamp OTP", storageErr);
+    }
   }, [email]);
 
   useEffect(() => {
@@ -39,7 +42,8 @@ const VerifyCode = () => {
     }
     setLoading(true);
     try {
-      await api.post("/auth/register/verify", { email, code });
+      const headers = await prepareCsrfHeaders();
+      await api.post("/auth/register/verify", { email, code }, { headers });
       toast.success("Xác thực thành công. Vui lòng đăng nhập.");
       window.location.href = "/login";
     } catch (err) {
@@ -61,12 +65,15 @@ const VerifyCode = () => {
     try {
       const payload = { email };
       if (captcha) payload.turnstileToken = captcha;
-      await api.post("/auth/register/resend", payload);
+      const headers = await prepareCsrfHeaders();
+      await api.post("/auth/register/resend", payload, { headers });
       toast.success("Đã gửi lại mã xác thực");
       try {
         const key = `register:otp:last:${email}`;
         localStorage.setItem(key, String(Date.now()));
-      } catch {}
+      } catch (storageErr) {
+        console.warn("Không lưu được timestamp gửi lại OTP", storageErr);
+      }
       setCooldown(60);
     } catch (err) {
       toast.error(err.response?.data?.message || "Gửi lại mã thất bại");
@@ -101,7 +108,7 @@ const VerifyCode = () => {
           <button
             type="submit"
             disabled={loading || attemptsLeft === 0}
-            className="w-full py-3 rounded-xl text-white font-medium bg-primary hover:bg-primary-dark transition"
+            className="w-full py-3 rounded-xl text-white font-semibold bg-brand-primary hover:bg-[#e5553d] transition disabled:opacity-60"
           >
             {loading
               ? "Đang xác thực..."
@@ -113,7 +120,7 @@ const VerifyCode = () => {
         <button
           onClick={handleResend}
           disabled={resending || cooldown > 0}
-          className="w-full py-2 mt-3 rounded-xl font-medium border hover:bg-slate-50 transition"
+          className="w-full py-2.5 mt-3 rounded-xl font-semibold border border-brand-primary text-brand-primary hover:bg-brand-primary/5 transition disabled:opacity-60"
         >
           {resending
             ? "Đang gửi lại..."

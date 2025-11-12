@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { addCartItem } from "@/services/cartService";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/hooks/useCart";
 import { addFavorite, fetchFavorites, removeFavorite } from "@/services/favoriteService";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const formatPrice = (value) =>
   value ? `${Number(value).toLocaleString("vi-VN")}₫` : "Liên hệ";

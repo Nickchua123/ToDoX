@@ -7,13 +7,18 @@ const parseAdminEmails = () =>
     .filter(Boolean);
 
 const getAdminEmailSet = () => new Set(parseAdminEmails());
+const allowedRoles = new Set(["admin", "staff"]);
 
 export const isAdminUser = async (userId) => {
+  if (!userId) return false;
   const adminEmails = getAdminEmailSet();
-  if (!userId || adminEmails.size === 0) return false;
-  const user = await User.findById(userId).select("email");
+  const user = await User.findById(userId).select("email role");
   if (!user) return false;
-  return adminEmails.has(String(user.email || "").toLowerCase());
+  if (allowedRoles.has(user.role)) return true;
+  if (adminEmails.size > 0) {
+    return adminEmails.has(String(user.email || "").toLowerCase());
+  }
+  return false;
 };
 
 export const requireAdmin = async (req, res, next) => {
@@ -23,17 +28,14 @@ export const requireAdmin = async (req, res, next) => {
     }
 
     const adminEmails = getAdminEmailSet();
-    if (adminEmails.size === 0) {
-      return res.status(403).json({ message: "ADMIN_EMAILS chưa được cấu hình" });
-    }
 
-    const user = await User.findById(req.userId).select("email name");
+    const user = await User.findById(req.userId).select("email name role");
     if (!user) {
       return res.status(401).json({ message: "Không tìm thấy người dùng" });
     }
 
     const email = String(user.email || "").toLowerCase();
-    if (!adminEmails.has(email)) {
+    if (!allowedRoles.has(user.role) && !(adminEmails.size > 0 && adminEmails.has(email))) {
       return res.status(403).json({ message: "Chỉ admin mới được phép" });
     }
 

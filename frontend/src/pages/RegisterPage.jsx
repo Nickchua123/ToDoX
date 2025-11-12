@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import api from "@/lib/axios";
 import { useNavigate, Link } from "react-router-dom";
 import Turnstile from "@/components/Turnstile";
+import { Eye, EyeOff } from "lucide-react";
+import { prepareCsrfHeaders } from "@/lib/csrf";
 
 const inputClass =
   "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition";
@@ -12,6 +14,7 @@ const RegisterPage = () => {
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [captcha, setCaptcha] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,11 +31,14 @@ const RegisterPage = () => {
     try {
       const payload = { ...formData };
       if (captcha) payload.turnstileToken = captcha;
-      await api.post("/auth/register/start", payload);
+      const headers = await prepareCsrfHeaders();
+      await api.post("/auth/register/start", payload, { headers });
       toast.success("Đã gửi mã xác thực đến email.");
       try {
         localStorage.setItem(`register:otp:last:${formData.email}`, String(Date.now()));
-      } catch {}
+      } catch (storageErr) {
+        console.warn("Không thể lưu timestamp OTP", storageErr);
+      }
       navigate(`/verify?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       toast.error(error.response?.data?.message || "Đăng ký thất bại!");
@@ -78,15 +84,27 @@ const RegisterPage = () => {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-600">Mật khẩu</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="Ít nhất 8 ký tự"
-                className={inputClass}
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Ít nhất 8 ký tự"
+                  className={`${inputClass} pr-10`}
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt.</p>
             </div>
 
             <button

@@ -1,16 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { addFavorite, fetchFavorites, removeFavorite } from "@/services/favoriteService";
-import { useAuth } from "./AuthContext";
-
-const FavoriteContext = createContext({
-  favorites: [],
-  favoriteIds: [],
-  loading: true,
-  refreshFavorites: async () => {},
-  toggleFavorite: async () => {},
-  isFavorite: () => false,
-});
+import { useAuth } from "@/hooks/useAuth";
+import { FavoriteContext } from "./favorite-context";
 
 export function FavoriteProvider({ children }) {
   const [favorites, setFavorites] = useState([]);
@@ -74,7 +66,7 @@ export function FavoriteProvider({ children }) {
         toast.error("Không cập nhật được yêu thích");
       }
     },
-    [favoriteIds, loadFavorites]
+    [favoriteIds, loadFavorites, normalizeId]
   );
 
   const value = useMemo(
@@ -91,5 +83,3 @@ export function FavoriteProvider({ children }) {
 
   return <FavoriteContext.Provider value={value}>{children}</FavoriteContext.Provider>;
 }
-
-export const useFavorites = () => useContext(FavoriteContext);

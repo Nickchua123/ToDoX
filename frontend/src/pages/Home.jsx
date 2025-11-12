@@ -56,7 +56,6 @@ export default function Home() {
   const [specialDealsData, setSpecialDealsData] = useState(specialDeals);
   const [suggestNew, setSuggestNew] = useState(suggestionsToday);
   const [suggestDeals, setSuggestDeals] = useState(suggestionsBest);
-  const [loadingHome, setLoadingHome] = useState(true);
 
   useEffect(() => {
     const loadHome = async () => {
@@ -102,7 +101,7 @@ export default function Home() {
         console.error(err);
         toast.error("Không tải được dữ liệu mới, hiển thị nội dung mặc định.");
       } finally {
-        setLoadingHome(false);
+        // no-op
       }
     };
     loadHome();

@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { fetchCart } from "@/services/cartService";
 import { toast } from "sonner";
-
-const CartContext = createContext({ totalItems: 0, refreshCart: () => {} });
+import { CartContext } from "./cart-context";
 
 export function CartProvider({ children }) {
   const [cartData, setCartData] = useState({ cart: null, subtotal: 0 });
@@ -35,5 +34,3 @@ export function CartProvider({ children }) {
     </CartContext.Provider>
   );
 }
-
-export const useCart = () => useContext(CartContext);

@@ -1,8 +1,8 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import { Heart, Search, ShoppingCart, User, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useCart } from "@/contexts/CartContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 
@@ -12,8 +12,8 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openMega, setOpenMega] = useState(null);
   const [megaData, setMegaData] = useState({
-    female: getStaticMenu("female"),
-    male: getStaticMenu("male"),
+    female: [],
+    male: [],
   });
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -40,7 +40,7 @@ export default function Header() {
         setMegaData(tree);
       } catch (err) {
         console.error(err);
-        toast.error("Không tải được danh mục, dùng dữ liệu mặc định.");
+        toast.error("Không tải được danh mục từ hệ thống.");
       }
     };
     loadCategories();
@@ -82,7 +82,6 @@ export default function Header() {
             />
             <Link to="/news" className="hover:text-brand-primary">Tin tức</Link>
             <Link to="/contact" className="hover:text-brand-primary">Liên hệ</Link>
-            <Link to="/orders" className="hover:text-brand-primary">Đơn mua</Link>
           </nav>
 
           {/* Icons */}
@@ -196,7 +195,18 @@ const MegaMenuPanel = ({ groups, onClose }) => {
     >
       {groups.map((group) => (
         <div key={group.title}>
-          <h3 className="font-semibold mb-2 text-gray-900">{group.title}</h3>
+          {group.slug ? (
+            <Link
+              to={`/category?slug=${group.slug}`}
+              className="font-semibold mb-2 text-gray-900 inline-flex items-center gap-1 hover:text-brand-primary transition"
+              onClick={onClose}
+            >
+              {group.title}
+              <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
+            </Link>
+          ) : (
+            <h3 className="font-semibold mb-2 text-gray-900">{group.title}</h3>
+          )}
           <ul className="space-y-1 text-sm text-gray-600">
             {group.items.map((item) => (
               <li key={`${group.title}-${item.slug || item.name}`}>
@@ -230,6 +240,7 @@ const buildMegaMenu = (categories) => {
     const secondLevel = children.get(root._id) || [];
     return secondLevel.map((group) => ({
       title: group.name,
+      slug: group.slug,
       items: (children.get(group._id) || []).map((item) => ({
         name: item.name,
         slug: item.slug,
@@ -241,86 +252,4 @@ const buildMegaMenu = (categories) => {
     female: mapRoot("Nữ"),
     male: mapRoot("Nam"),
   };
-};
-
-const getStaticMenu = (type) => {
-  const preset = {
-    female: [
-      {
-        title: "Phụ kiện nữ",
-        items: [
-          { name: "Tất nữ" },
-          { name: "Túi nữ" },
-          { name: "Phụ kiện nữ khác" },
-        ],
-      },
-      {
-        title: "Áo nữ",
-        items: [
-          { name: "Áo khoác nữ" },
-          { name: "Áo hoodie - Áo nỉ nữ" },
-          { name: "Áo polo nữ" },
-          { name: "Áo sơ mi nữ" },
-          { name: "Áo thun nữ" },
-        ],
-      },
-      {
-        title: "Quần nữ",
-        items: [
-          { name: "Quần dài nữ" },
-          { name: "Quần nỉ nữ" },
-          { name: "Quần kaki nữ" },
-          { name: "Quần jeans nữ" },
-          { name: "Quần âu nữ" },
-        ],
-      },
-      {
-        title: "Đồ thể thao nữ",
-        items: [
-          { name: "Quần thể thao nữ" },
-          { name: "Áo polo thể thao nữ" },
-          { name: "Bộ thể thao nữ" },
-        ],
-      },
-    ],
-    male: [
-      {
-        title: "Phụ kiện nam",
-        items: [
-          { name: "Tất nam" },
-          { name: "Túi xách nam" },
-          { name: "Mũ nam" },
-          { name: "Thắt lưng nam" },
-        ],
-      },
-      {
-        title: "Áo nam",
-        items: [
-          { name: "Áo khoác nam" },
-          { name: "Áo nỉ nam" },
-          { name: "Áo len nam" },
-          { name: "Áo sơ mi nam" },
-        ],
-      },
-      {
-        title: "Quần nam",
-        items: [
-          { name: "Quần kaki" },
-          { name: "Quần short nam" },
-          { name: "Quần jeans nam" },
-          { name: "Quần âu nam" },
-        ],
-      },
-      {
-        title: "Đồ thể thao nam",
-        items: [
-          { name: "Quần thể thao nam" },
-          { name: "Áo polo thể thao nam" },
-          { name: "Áo thun thể thao nam" },
-          { name: "Bộ thể thao nam" },
-        ],
-      },
-    ],
-  };
-  return preset[type] || [];
 };

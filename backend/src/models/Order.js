@@ -45,6 +45,10 @@ const orderSchema = new mongoose.Schema(
     trackingNumber: { type: String },              // Mã vận đơn
     estimatedDelivery: { type: Date },             // Ngày dự kiến giao
 
+    cancellationRequested: { type: Boolean, default: false },
+    cancellationRequestedAt: { type: Date },
+    cancellationRequestReason: { type: String, trim: true },
+
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
 

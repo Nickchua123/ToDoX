@@ -27,7 +27,11 @@ export default function Turnstile({ siteKey, onToken, theme = "auto", size = "no
         if (!w?.turnstile || !containerRef.current) return;
         // Remove previous widget if any
         if (widgetIdRef.current != null) {
-          try { w.turnstile.remove(widgetIdRef.current); } catch {}
+          try {
+            w.turnstile.remove(widgetIdRef.current);
+          } catch (removeErr) {
+            console.error("[Turnstile] remove widget failed", removeErr);
+          }
           widgetIdRef.current = null;
         }
         const id = w.turnstile.render(containerRef.current, {
@@ -40,14 +44,17 @@ export default function Turnstile({ siteKey, onToken, theme = "auto", size = "no
           retry: "auto",
         });
         widgetIdRef.current = id;
-      } catch {}
+      } catch (renderErr) {
+        console.error("[Turnstile] render error", renderErr);
+      }
     };
 
     // If script is loaded, use ready API
     if (w?.turnstile) {
       try {
         w.turnstile.ready(renderWidget);
-      } catch {
+      } catch (readyErr) {
+        console.warn("[Turnstile] ready() failed, fallback render", readyErr);
         renderWidget();
       }
     } else {
@@ -58,28 +65,43 @@ export default function Turnstile({ siteKey, onToken, theme = "auto", size = "no
         if (w?.turnstile) {
           try {
             clearInterval(waitTimerRef.current);
-          } catch {}
+          } catch (clearErr) {
+            console.warn("[Turnstile] clearInterval failed", clearErr);
+          }
           waitTimerRef.current = null;
           try {
             w.turnstile.ready(renderWidget);
-          } catch {
+          } catch (pollReadyErr) {
+            console.warn("[Turnstile] ready() during poll failed, fallback render", pollReadyErr);
             renderWidget();
           }
         } else if (attempts > 60) { // ~15s at 250ms
-          try { clearInterval(waitTimerRef.current); } catch {}
+          try {
+            clearInterval(waitTimerRef.current);
+          } catch (timeoutErr) {
+            console.warn("[Turnstile] clearInterval on timeout failed", timeoutErr);
+          }
           waitTimerRef.current = null;
-          // give up silently
+          console.error("[Turnstile] Script not loaded after waiting, giving up.");
         }
       }, 250);
     }
 
     return () => {
       if (waitTimerRef.current) {
-        try { clearInterval(waitTimerRef.current); } catch {}
+        try {
+          clearInterval(waitTimerRef.current);
+        } catch (cleanupErr) {
+          console.warn("[Turnstile] clearInterval cleanup failed", cleanupErr);
+        }
         waitTimerRef.current = null;
       }
       if (widgetIdRef.current != null) {
-        try { w?.turnstile?.remove(widgetIdRef.current); } catch {}
+        try {
+          w?.turnstile?.remove(widgetIdRef.current);
+        } catch (removeErr) {
+          console.error("[Turnstile] cleanup remove failed", removeErr);
+        }
         widgetIdRef.current = null;
       }
     };

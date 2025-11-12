@@ -34,6 +34,7 @@ const enrichItems = async (items) => {
       name: product.name,
       price: product.price,
       quantity: item.quantity,
+      image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined,
     };
   });
 
@@ -83,11 +84,25 @@ export const createOrder = async (req, res) => {
 
 export const listMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.userId })
-      .sort({ createdAt: -1 })
-      .populate("items.product", "name images price")
-      .populate("address");
-    res.json(orders);
+    const { status, page = 1, limit = 10 } = req.query;
+    const query = { user: req.userId };
+    if (status) query.status = status;
+
+    const perPage = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+    const skip = (pageNumber - 1) * perPage;
+
+    const [items, total] = await Promise.all([
+      Order.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(perPage)
+        .populate("items.product", "name images price")
+        .populate("address"),
+      Order.countDocuments(query),
+    ]);
+
+    res.json({ total, page: pageNumber, items });
   } catch (err) {
     res.status(500).json({ message: "Không lấy được đơn hàng", error: err.message });
   }
@@ -159,6 +174,7 @@ export const updateOrderStatus = async (req, res) => {
 export const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
+    const { reason } = req.body || {};
     if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -169,6 +185,10 @@ export const cancelOrder = async (req, res) => {
     }
 
     order.status = "cancelled";
+    if (reason) order.cancelReason = reason;
+    order.cancellationRequested = false;
+    order.cancellationRequestedAt = null;
+    order.cancellationRequestReason = undefined;
     await order.save();
     await Promise.all(
       order.items.map((item) =>
@@ -178,5 +198,52 @@ export const cancelOrder = async (req, res) => {
     res.json(order);
   } catch (err) {
     res.status(500).json({ message: "Không hủy được đơn hàng", error: err.message });
+  }
+};
+
+export const requestCancelOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body || {};
+    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    const isOwner = order.user?.toString() === req.userId;
+    if (!isOwner) return res.status(403).json({ message: "Không có quyền yêu cầu hủy" });
+    if (order.status !== "processing") {
+      return res.status(400).json({ message: "Chỉ có thể gửi yêu cầu khi đơn đang xử lý" });
+    }
+    if (order.cancellationRequested) {
+      return res.status(400).json({ message: "Bạn đã gửi yêu cầu hủy trước đó" });
+    }
+    order.cancellationRequested = true;
+    order.cancellationRequestedAt = new Date();
+    if (reason) order.cancellationRequestReason = reason;
+    await order.save();
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: "Không gửi được yêu cầu hủy", error: err.message });
+  }
+};
+
+export const confirmOrderDelivery = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    const isOwner = order.user?.toString() === req.userId;
+    if (!isOwner) return res.status(403).json({ message: "Không có quyền xác nhận" });
+    if (order.status !== "shipped") {
+      return res.status(400).json({ message: "Chỉ xác nhận khi đơn đang giao" });
+    }
+
+    order.status = "delivered";
+    order.isDelivered = true;
+    order.deliveredAt = new Date();
+    await order.save();
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: "Không xác nhận được đơn hàng", error: err.message });
   }
 };

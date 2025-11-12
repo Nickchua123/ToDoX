@@ -1,5 +1,6 @@
 // CategoryPage.jsx
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,6 +16,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CategoryRound from "@/components/CategoryRound";
 import ProductCard from "@/components/ProductCard";
+import api from "@/lib/axios";
+import { toast } from "sonner";
 
 // Dùng data nội bộ
 import {
@@ -32,8 +35,25 @@ const toNumber = (v) => {
   return Number(String(v).replace(/[^\d]/g, "")) || Number.POSITIVE_INFINITY;
 };
 
+const formatPrice = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "Liên hệ";
+  return `${num.toLocaleString("vi-VN")}₫`;
+};
+
+const calcTag = (price, oldPrice) => {
+  if (!Number.isFinite(price) || !Number.isFinite(oldPrice) || oldPrice <= price) return undefined;
+  return Math.round(((oldPrice - price) / oldPrice) * 100);
+};
+
 export default function CategoryPage() {
   const [sort, setSort] = useState("default");
+  const [searchParams] = useSearchParams();
+  const activeSlug = searchParams.get("slug");
+  const [categoryTitle, setCategoryTitle] = useState("Phụ kiện / Sản phẩm nữ");
+  const [dynamicProducts, setDynamicProducts] = useState([]);
+  const [loadingCategory, setLoadingCategory] = useState(false);
+  const [comingSoon, setComingSoon] = useState(false);
 
   // Gom các sản phẩm "nữ"
   const femaleProducts = useMemo(() => {
@@ -104,6 +124,67 @@ export default function CategoryPage() {
     rail.scrollBy({ left: dir * delta, behavior: "smooth" });
   };
 
+  useEffect(() => {
+    let ignore = false;
+    const loadCategoryProducts = async () => {
+      if (!activeSlug) {
+        setCategoryTitle("Phụ kiện / Sản phẩm nữ");
+        setDynamicProducts([]);
+        setComingSoon(false);
+        return;
+      }
+      try {
+        setLoadingCategory(true);
+        setComingSoon(false);
+        const { data: category } = await api.get(`/categories/${activeSlug}`);
+        if (ignore) return;
+        const categoryId = category?._id;
+        setCategoryTitle(category?.name || "Danh mục");
+        if (!categoryId) {
+          setDynamicProducts([]);
+          setComingSoon(true);
+          return;
+        }
+        const { data: productRes } = await api.get(`/products?category=${categoryId}&limit=100`);
+        if (ignore) return;
+        const items = productRes?.items || productRes || [];
+        if (!items.length) {
+          setDynamicProducts([]);
+          setComingSoon(true);
+          return;
+        }
+        const mapped = items.map((p, idx) => ({
+          id: p._id || idx,
+          slug: p.slug,
+          name: p.name,
+          price: formatPrice(p.price),
+          old: p.oldPrice ? formatPrice(p.oldPrice) : undefined,
+          img: p.images?.[0] || p.image || "/placeholder.png",
+          tag: calcTag(Number(p.price), Number(p.oldPrice)),
+        }));
+        setDynamicProducts(mapped);
+      } catch (err) {
+        if (!ignore) {
+          console.error(err);
+          toast.error("Không tải được sản phẩm cho danh mục này");
+          setDynamicProducts([]);
+          setComingSoon(true);
+        }
+      } finally {
+        if (!ignore) setLoadingCategory(false);
+      }
+    };
+    loadCategoryProducts();
+    return () => {
+      ignore = true;
+    };
+  }, [activeSlug]);
+
+  const finalProducts = useMemo(
+    () => (activeSlug ? dynamicProducts : sortedProducts),
+    [activeSlug, dynamicProducts, sortedProducts]
+  );
+
   return (
     <>
       <Header />
@@ -111,7 +192,7 @@ export default function CategoryPage() {
       {/* TIÊU ĐỀ + SẮP XẾP */}
       <div className="max-w-7xl mx-auto px-6 pt-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">Phụ kiện / Sản phẩm nữ</h1>
+          <h1 className="text-2xl font-semibold">{categoryTitle}</h1>
 
           <div className="flex items-center gap-2 relative z-50">
             <span className="text-gray-700 text-sm font-medium">
@@ -181,7 +262,15 @@ export default function CategoryPage() {
         <div className="grid grid-cols-12 gap-8">
           {/* Sản phẩm */}
           <div className="col-span-12 lg:col-span-9 grid grid-cols-2 md:grid-cols-3 gap-6">
-            {sortedProducts.map((p, idx) => (
+            {activeSlug && loadingCategory && (
+              <div className="col-span-full text-center text-sm text-gray-500">Đang tải sản phẩm...</div>
+            )}
+            {comingSoon && !loadingCategory && (
+              <div className="col-span-full text-center text-sm text-gray-500">
+                Sản phẩm sẽ sớm được cập nhật.
+              </div>
+            )}
+            {finalProducts.map((p, idx) => (
               <ProductCard key={p.id || p.img || idx} {...p} />
             ))}
           </div>
