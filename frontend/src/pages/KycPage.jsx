@@ -3,7 +3,7 @@ import React from "react";
 export default function KycPage() {
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">ThÃ´ng tin cÃ¡ nhÃ¢n (KYC)</h2>
+      <h2 className="text-2xl font-semibold mb-4">Thông tin cá nhân (KYC)</h2>
 
       <div className="bg-white p-6 rounded shadow max-w-2xl">
         <p className="text-gray-600 mb-6">
@@ -47,4 +47,3 @@ export default function KycPage() {
     </div>
   );
 }
-

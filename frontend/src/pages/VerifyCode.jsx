@@ -95,14 +95,19 @@ const VerifyCode = () => {
             required
           />
           <p className="text-center text-sm text-muted-foreground">
-            Bạn còn <span className="font-semibold">{attemptsLeft}</span> lần thử.
+            Bạn còn <span className="font-semibold">{attemptsLeft}</span> lần
+            thử.
           </p>
           <button
             type="submit"
             disabled={loading || attemptsLeft === 0}
             className="w-full py-3 rounded-xl text-white font-medium bg-primary hover:bg-primary-dark transition"
           >
-            {loading ? "Đang xác thực..." : attemptsLeft === 0 ? "Hết lượt thử" : "Xác thực"}
+            {loading
+              ? "Đang xác thực..."
+              : attemptsLeft === 0
+              ? "Hết lượt thử"
+              : "Xác thực"}
           </button>
         </form>
         <button
@@ -110,7 +115,11 @@ const VerifyCode = () => {
           disabled={resending || cooldown > 0}
           className="w-full py-2 mt-3 rounded-xl font-medium border hover:bg-slate-50 transition"
         >
-          {resending ? "Đang gửi lại..." : cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : "Gửi lại mã"}
+          {resending
+            ? "Đang gửi lại..."
+            : cooldown > 0
+            ? `Gửi lại mã (${cooldown}s)`
+            : "Gửi lại mã"}
         </button>
         <div className="mt-4">
           <Turnstile
