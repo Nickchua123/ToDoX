@@ -17,7 +17,10 @@ const enrichItems = async (items) => {
   }));
   const productIds = normalized.map((i) => i.productId).filter(isValidObjectId);
   if (productIds.length !== normalized.length) throw new Error("productId không hợp lệ");
-  const products = await Product.find({ _id: { $in: productIds }, isPublished: { $ne: false } });
+  const products = await Product.find({
+    _id: productIds,
+    isPublished: true,
+  });
   const productMap = new Map(products.map((p) => [p._id.toString(), p]));
 
   const orderItems = normalized.map((item) => {
@@ -40,21 +43,28 @@ const enrichItems = async (items) => {
 
 export const createOrder = async (req, res) => {
   try {
-    const { items, addressId, notes } = req.body || {};
-    const { orderItems, total, products } = await enrichItems(items);
-
-    if (addressId && !isValidObjectId(addressId)) {
+    const { items, addressId, notes, shippingFee = 0, discount = 0 } = req.body || {};
+    if (!addressId) {
+      return res.status(400).json({ message: "Thiếu địa chỉ nhận hàng" });
+    }
+    if (!isValidObjectId(addressId)) {
       return res.status(400).json({ message: "Địa chỉ không hợp lệ" });
     }
-    if (addressId) {
-      const addr = await Address.findOne({ _id: addressId, user: req.userId });
-      if (!addr) return res.status(400).json({ message: "Không tìm thấy địa chỉ" });
-    }
+    const address = await Address.findOne({ _id: addressId, user: req.userId });
+    if (!address) return res.status(400).json({ message: "Không tìm thấy địa chỉ" });
+
+    const { orderItems, total } = await enrichItems(items);
+    const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const finalShipping = Number(shippingFee) || 0;
+    const finalDiscount = Number(discount) || 0;
 
     const order = await Order.create({
       user: req.userId,
       items: orderItems,
-      total,
+      subtotal,
+      shippingFee: finalShipping,
+      discount: finalDiscount,
+      total: subtotal + finalShipping - finalDiscount,
       address: addressId,
       notes,
     });

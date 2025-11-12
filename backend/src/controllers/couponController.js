@@ -7,7 +7,7 @@ export const listCoupons = async (req, res) => {
     const coupons = await Coupon.find().sort({ createdAt: -1 });
     res.json(coupons);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng láº¥y Ä‘Æ°á»£c coupon", error: err.message });
+    res.status(500).json({ message: "Không lấy được coupon", error: err.message });
   }
 };
 
@@ -15,11 +15,11 @@ export const createCoupon = async (req, res) => {
   try {
     const { code, discountPercent, maxUses = 0, expiresAt, active = true } = req.body || {};
     if (!code || discountPercent == null) {
-      return res.status(400).json({ message: "Thiáº¿u mÃ£ hoáº·c pháº§n trÄƒm giáº£m" });
+      return res.status(400).json({ message: "Thiếu mã hoặc phần trăm giảm" });
     }
     const normalized = normalizeCode(code);
     const exists = await Coupon.findOne({ code: normalized });
-    if (exists) return res.status(409).json({ message: "Coupon Ä‘Ã£ tá»“n táº¡i" });
+    if (exists) return res.status(409).json({ message: "Coupon đã tồn tại" });
     const coupon = await Coupon.create({
       code: normalized,
       discountPercent,
@@ -29,7 +29,7 @@ export const createCoupon = async (req, res) => {
     });
     res.status(201).json(coupon);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng táº¡o Ä‘Æ°á»£c coupon", error: err.message });
+    res.status(500).json({ message: "Không tạo được coupon", error: err.message });
   }
 };
 
@@ -39,10 +39,10 @@ export const updateCoupon = async (req, res) => {
     const update = { ...req.body };
     if (update.code) update.code = normalizeCode(update.code);
     const coupon = await Coupon.findByIdAndUpdate(id, update, { new: true });
-    if (!coupon) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y coupon" });
+    if (!coupon) return res.status(404).json({ message: "Không tìm thấy coupon" });
     res.json(coupon);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng cáº­p nháº­t Ä‘Æ°á»£c coupon", error: err.message });
+    res.status(500).json({ message: "Không cập nhật được coupon", error: err.message });
   }
 };
 
@@ -50,26 +50,26 @@ export const deleteCoupon = async (req, res) => {
   try {
     const { id } = req.params;
     const removed = await Coupon.findByIdAndDelete(id);
-    if (!removed) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y coupon" });
-    res.json({ message: "ÄÃ£ xÃ³a coupon" });
+    if (!removed) return res.status(404).json({ message: "Không tìm thấy coupon" });
+    res.json({ message: "Đã xóa coupon" });
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng xÃ³a Ä‘Æ°á»£c coupon", error: err.message });
+    res.status(500).json({ message: "Không xóa được coupon", error: err.message });
   }
 };
 
 export const validateCoupon = async (req, res) => {
   try {
     const { code } = req.body || {};
-    if (!code) return res.status(400).json({ message: "Thiáº¿u mÃ£ giáº£m" });
+    if (!code) return res.status(400).json({ message: "Thiếu mã giảm" });
     const normalized = normalizeCode(code);
     const coupon = await Coupon.findOne({ code: normalized });
-    if (!coupon) return res.status(404).json({ message: "Coupon khÃ´ng tá»“n táº¡i" });
-    if (!coupon.active) return res.status(400).json({ message: "Coupon Ä‘Ã£ bá»‹ vÃ´ hiá»‡u" });
+    if (!coupon) return res.status(404).json({ message: "Coupon không tồn tại" });
+    if (!coupon.active) return res.status(400).json({ message: "Coupon đã bị vô hiệu" });
     if (coupon.expiresAt && coupon.expiresAt < new Date()) {
-      return res.status(400).json({ message: "Coupon Ä‘Ã£ háº¿t háº¡n" });
+      return res.status(400).json({ message: "Coupon đã hết hạn" });
     }
     if (coupon.maxUses && coupon.used >= coupon.maxUses) {
-      return res.status(400).json({ message: "Coupon Ä‘Ã£ háº¿t lÆ°á»£t dÃ¹ng" });
+      return res.status(400).json({ message: "Coupon đã hết lượt dùng" });
     }
     res.json({
       code: coupon.code,
@@ -78,7 +78,7 @@ export const validateCoupon = async (req, res) => {
       remaining: coupon.maxUses ? coupon.maxUses - coupon.used : null,
     });
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng xÃ¡c thá»±c Ä‘Æ°á»£c coupon", error: err.message });
+    res.status(500).json({ message: "Không xác thực được coupon", error: err.message });
   }
 };
 

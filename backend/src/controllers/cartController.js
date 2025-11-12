@@ -12,9 +12,9 @@ const getOrCreateCart = async (userId) => {
 };
 
 const loadProduct = async (productId) => {
-  if (!isValidObjectId(productId)) throw new Error("productId khÃ´ng há»£p lá»‡");
+  if (!isValidObjectId(productId)) throw new Error("productId không hợp lệ");
   const product = await Product.findById(productId);
-  if (!product) throw new Error("Sáº£n pháº©m khÃ´ng tá»“n táº¡i");
+  if (!product) throw new Error("Sản phẩm không tồn tại");
   return product;
 };
 
@@ -25,7 +25,7 @@ export const getCart = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json(cart);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng láº¥y Ä‘Æ°á»£c giá» hÃ ng", error: err.message });
+    res.status(500).json({ message: "Không lấy được giỏ hàng", error: err.message });
   }
 };
 
@@ -34,13 +34,13 @@ export const addItem = async (req, res) => {
     const { productId, variantId, quantity = 1 } = req.body || {};
     const product = await loadProduct(productId);
     if (variantId && !isValidObjectId(variantId)) {
-      return res.status(400).json({ message: "variantId khÃ´ng há»£p lá»‡" });
+      return res.status(400).json({ message: "variantId không hợp lệ" });
     }
     if (variantId) {
       const variant = await Variant.findOne({ _id: variantId, product: product._id });
-      if (!variant) return res.status(400).json({ message: "Biáº¿n thá»ƒ khÃ´ng tá»“n táº¡i" });
+      if (!variant) return res.status(400).json({ message: "Biến thể không tồn tại" });
     }
-    if (quantity <= 0) return res.status(400).json({ message: "Sá»‘ lÆ°á»£ng pháº£i > 0" });
+    if (quantity <= 0) return res.status(400).json({ message: "Số lượng phải > 0" });
 
     const cart = await getOrCreateCart(req.userId);
     const idx = cart.items.findIndex(
@@ -59,7 +59,7 @@ export const addItem = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json(cart);
   } catch (err) {
-    res.status(400).json({ message: err.message || "KhÃ´ng thÃªm Ä‘Æ°á»£c sáº£n pháº©m" });
+    res.status(400).json({ message: err.message || "Không thêm được sản phẩm" });
   }
 };
 
@@ -68,11 +68,11 @@ export const updateItem = async (req, res) => {
     const { itemId } = req.params;
     const { quantity } = req.body || {};
     if (!Number.isFinite(quantity) || quantity <= 0) {
-      return res.status(400).json({ message: "Sá»‘ lÆ°á»£ng pháº£i > 0" });
+      return res.status(400).json({ message: "Số lượng phải > 0" });
     }
     const cart = await getOrCreateCart(req.userId);
     const item = cart.items.id(itemId);
-    if (!item) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y item" });
+    if (!item) return res.status(404).json({ message: "Không tìm thấy item" });
     item.quantity = Number(quantity);
     cart.updatedAt = new Date();
     await cart.save();
@@ -80,7 +80,7 @@ export const updateItem = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json(cart);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng cáº­p nháº­t Ä‘Æ°á»£c item", error: err.message });
+    res.status(500).json({ message: "Không cập nhật được item", error: err.message });
   }
 };
 
@@ -89,15 +89,15 @@ export const removeItem = async (req, res) => {
     const { itemId } = req.params;
     const cart = await getOrCreateCart(req.userId);
     const item = cart.items.id(itemId);
-    if (!item) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y item" });
+    if (!item) return res.status(404).json({ message: "Không tìm thấy item" });
     item.deleteOne();
     cart.updatedAt = new Date();
     await cart.save();
     await cart.populate("items.product", "name price images");
     await cart.populate("items.variant", "label priceDelta");
-    res.json(cart);
+    res.json({ message: "Item removed", remaining: cart.items });
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng xÃ³a Ä‘Æ°á»£c item", error: err.message });
+    res.status(500).json({ message: "Không xóa được item", error: err.message });
   }
 };
 
@@ -107,9 +107,8 @@ export const clearCart = async (req, res) => {
     cart.items = [];
     cart.updatedAt = new Date();
     await cart.save();
-    res.json(cart);
+    res.json({ message: "Cart cleared", items: [] });
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng lÃ m rá»—ng giá» hÃ ng", error: err.message });
+    res.status(500).json({ message: "Không làm rỗng giỏ hàng", error: err.message });
   }
 };
-

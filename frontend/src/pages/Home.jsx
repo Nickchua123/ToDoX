@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header.jsx";
 import Footer from "../components/Footer.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
@@ -22,12 +22,96 @@ import {
   suggestionsBest,
   specialDeals,
 } from "../data/mock.js";
+import api from "@/lib/axios.js";
+import { toast } from "sonner";
 
 const asset = (p) => new URL(`../anhNNKB/${p}`, import.meta.url).href;
+const fallbackImage = asset("img_banner_1.webp");
+const formatPrice = (value) =>
+  typeof value === "number"
+    ? `${value.toLocaleString("vi-VN")}₫`
+    : value || "Liên hệ";
+
+const pickSpecificCategories = (allCats, rootName, childNames = []) => {
+  const root = allCats.find((cat) => cat.name === rootName && !cat.parent);
+  if (!root) return [];
+  const subCats = allCats.filter(
+    (cat) => cat.parent && String(cat.parent) === String(root._id)
+  );
+  const byName = new Map(subCats.map((cat) => [cat.name, cat]));
+  return childNames
+    .map((name) => byName.get(name))
+    .filter(Boolean)
+    .map((cat) => ({
+      label: cat.name,
+      slug: cat.slug,
+      img: cat.image || fallbackImage,
+    }));
+};
 
 export default function Home() {
   const [tab, setTab] = useState("gia-tot");
   const [accTab, setAccTab] = useState("nam");
+  const [categoryData, setCategoryData] = useState(categories);
+  const [specialDealsData, setSpecialDealsData] = useState(specialDeals);
+  const [suggestNew, setSuggestNew] = useState(suggestionsToday);
+  const [suggestDeals, setSuggestDeals] = useState(suggestionsBest);
+  const [loadingHome, setLoadingHome] = useState(true);
+
+  useEffect(() => {
+    const loadHome = async () => {
+      try {
+        const [catRes, newRes, dealRes] = await Promise.all([
+          api.get("/categories?limit=200"),
+          api.get("/products?limit=8&sort=-createdAt"),
+          api.get("/products?limit=8&sort=-price"),
+        ]);
+        const allCats = catRes.data || [];
+        const femaleGroup = pickSpecificCategories(allCats, "Nữ", [
+          "Đồ thể thao nữ",
+          "Áo nữ",
+          "Quần nữ",
+          "Phụ kiện nữ",
+        ]);
+        const maleGroup = pickSpecificCategories(allCats, "Nam", [
+          "Đồ thể thao nam",
+          "Áo nam",
+          "Quần nam",
+          "Phụ kiện nam",
+        ]);
+        const mappedCats = [...femaleGroup, ...maleGroup];
+        if (mappedCats.length) setCategoryData(mappedCats);
+
+        const mapProducts = (items) =>
+          (items || []).map((p) => ({
+            id: p._id,
+            name: p.name,
+            price: formatPrice(p.price),
+            img: p.images?.[0] || fallbackImage,
+          }));
+
+        const newProducts = mapProducts(newRes.data?.items || newRes.data || []);
+        if (newProducts.length) setSuggestNew(newProducts);
+
+        const dealProducts = mapProducts(dealRes.data?.items || dealRes.data || []);
+        if (dealProducts.length) {
+          setSuggestDeals(dealProducts);
+          setSpecialDealsData(dealProducts.slice(0, 4));
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Không tải được dữ liệu mới, hiển thị nội dung mặc định.");
+      } finally {
+        setLoadingHome(false);
+      }
+    };
+    loadHome();
+  }, []);
+
+  const currentSuggestions = useMemo(
+    () => (tab === "gia-tot" ? suggestDeals : suggestNew),
+    [tab, suggestDeals, suggestNew]
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -49,7 +133,7 @@ export default function Home() {
       {/* 2. DANH MỤC TRANG */}
       <section className="py-10 section-surface">
         <div className="max-w-6xl mx-auto px-4 grid grid-cols-4 md:grid-cols-8 gap-6">
-          {categories.map((c, i) => (
+          {categoryData.map((c, i) => (
             <CategoryRound key={i} {...c} />
           ))}
         </div>
@@ -70,9 +154,11 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4">
           <SectionHeading title="Ưu đãi đặc biệt" />
           <div className="grid md:grid-cols-4 gap-4">
-            {(specialDeals || products.slice(0, 4)).map((p, i) => (
-              <ProductCard key={p.id ?? i} {...p} />
-            ))}
+            {(specialDealsData.length ? specialDealsData : products.slice(0, 4)).map(
+              (p, i) => (
+                <ProductCard key={p.id ?? i} {...p} />
+              )
+            )}
           </div>
           <div className="text-center mt-6">
             <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border hover:bg-gray-50">
@@ -104,11 +190,9 @@ export default function Home() {
           ))}
         </div>
         <div className="grid md:grid-cols-4 gap-4 mt-6">
-          {(tab === "gia-tot" ? suggestionsBest : suggestionsToday).map(
-            (p, i) => (
-              <ProductCard key={i} {...p} />
-            )
-          )}
+          {currentSuggestions.map((p, i) => (
+            <ProductCard key={p.id ?? i} {...p} />
+          ))}
         </div>
       </section>
 

@@ -11,6 +11,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 import productDetails from "../data/productDetails.js";
+import { addCartItem } from "@/services/cartService";
+import { toast } from "sonner";
+import { useCart } from "@/contexts/CartContext";
 
 const QtyInput = ({ value, onChange }) => (
   <div className="inline-flex items-center gap-3 rounded-xl border px-3 py-2">
@@ -35,10 +38,11 @@ const QtyInput = ({ value, onChange }) => (
 export default function ProductDetail({ id: passedId }) {
   const { id: routeId } = useParams();
   const id = String(passedId ?? routeId ?? "1");
-
+  const { refreshCart } = useCart();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [active, setActive] = useState(0);
+  const [adding, setAdding] = useState(false);
 
   const product = productDetails[id];
 
@@ -78,6 +82,31 @@ export default function ProductDetail({ id: passedId }) {
     const arr = (product.related || []).filter((r) => String(r.id) !== String(id));
     return arr.slice(0, 3);
   }, [product, id]);
+
+  const handleAddToCart = async (redirect) => {
+    if (!product?.id) {
+      toast.error("Không xác định được sản phẩm để thêm vào giỏ.");
+      return;
+    }
+    try {
+      setAdding(true);
+      await addCartItem({
+        productId: product.id,
+        quantity: qty,
+      });
+      await refreshCart();
+      toast.success("Đã thêm vào giỏ hàng");
+      if (redirect) {
+        navigate("/checkout");
+      }
+    } catch (err) {
+      const message =
+        err?.response?.data?.message || "Không thể thêm sản phẩm vào giỏ.";
+      toast.error(message);
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <>
@@ -142,16 +171,18 @@ export default function ProductDetail({ id: passedId }) {
                 <button
                   className="rounded-full bg-brand-primary px-5 py-2 text-white hover:bg-[#e5553d] transition"
                   type="button"
-                  onClick={() => navigate("/cart")}
+                  onClick={() => handleAddToCart(false)}
+                  disabled={adding}
                 >
                   Thêm vào giỏ
                 </button>
                 <button
                   className="rounded-full border border-brand-primary px-5 py-2 text-brand-primary hover:bg-brand-primary hover:text-white transition"
                   type="button"
-                  onClick={() => navigate("/checkout")}
+                  onClick={() => handleAddToCart(true)}
+                  disabled={adding}
                 >
-                  Mua ngay
+                  {adding ? "Đang xử lý..." : "Mua ngay"}
                 </button>
               </div>
 
@@ -276,4 +307,3 @@ export default function ProductDetail({ id: passedId }) {
     </>
   );
 }
-

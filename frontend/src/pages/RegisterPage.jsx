@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router-dom";
 import Turnstile from "@/components/Turnstile";
+
+const inputClass =
+  "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -39,62 +42,77 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#fefcff]">
-      <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Đăng ký tài khoản</h2>
+    <div className="min-h-screen bg-gradient-to-br from-[#fff5f0] via-white to-[#fefcff] py-12 px-4 flex items-center justify-center">
+      <div className="w-full max-w-lg">
+        <div className="bg-white/90 backdrop-blur border border-orange-100 shadow-xl rounded-3xl p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <p className="text-xs font-semibold tracking-[0.4em] text-gray-400">ND STYLE</p>
+            <h1 className="text-3xl font-semibold text-brand-dark">Tạo tài khoản mới</h1>
+            <p className="text-sm text-gray-500">Nhận ưu đãi độc quyền và theo dõi đơn hàng dễ dàng</p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Tên người dùng"
-            className="w-full border rounded-lg p-3"
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            className="w-full border rounded-lg p-3"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Mật khẩu"
-            className="w-full border rounded-lg p-3"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-600">Tên người dùng</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Nguyễn Văn A"
+                className={inputClass}
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-600">Email</label>
+              <input
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                className={inputClass}
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-600">Mật khẩu</label>
+              <input
+                type="password"
+                name="password"
+                placeholder="Ít nhất 8 ký tự"
+                className={inputClass}
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl text-white font-medium bg-primary hover:bg-primary-dark transition"
-          >
-            {loading ? "Đang đăng ký..." : "Đăng ký"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-white font-semibold bg-brand-primary hover:bg-[#e5553d] transition disabled:opacity-70"
+            >
+              {loading ? "Đang đăng ký..." : "Tạo tài khoản"}
+            </button>
+          </form>
 
-        <div className="mt-4">
-          <Turnstile
-            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-            onToken={setCaptcha}
-            theme="auto"
-          />
+          <div className="border-t pt-4">
+            <Turnstile
+              siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+              onToken={setCaptcha}
+              theme="light"
+            />
+          </div>
+
+          <p className="text-center text-sm text-gray-600">
+            Đã có tài khoản?{" "}
+            <Link to="/login" className="text-brand-primary font-medium hover:underline">
+              Đăng nhập ngay
+            </Link>
+          </p>
         </div>
-
-        <p className="text-center text-sm mt-4">
-          Đã có tài khoản?{" "}
-          <a href="/login" className="text-primary hover:underline">
-            Đăng nhập ngay
-          </a>
-        </p>
       </div>
     </div>
   );

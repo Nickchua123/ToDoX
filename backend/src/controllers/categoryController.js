@@ -24,7 +24,7 @@ export const listCategories = async (req, res) => {
     const categories = await Category.find(query).sort({ createdAt: -1 });
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng láº¥y Ä‘Æ°á»£c danh má»¥c", error: err.message });
+    res.status(500).json({ message: "Không lấy được danh mục", error: err.message });
   }
 };
 
@@ -33,27 +33,26 @@ export const getCategory = async (req, res) => {
     const { idOrSlug } = req.params;
     const cond = isValidObjectId(idOrSlug) ? { _id: idOrSlug } : { slug: idOrSlug };
     const category = await Category.findOne(cond);
-    if (!category) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y danh má»¥c" });
+    if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
     res.json(category);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng láº¥y Ä‘Æ°á»£c danh má»¥c", error: err.message });
+    res.status(500).json({ message: "Không lấy được danh mục", error: err.message });
   }
 };
 
 export const createCategory = async (req, res) => {
   try {
     const { name, slug, description, image, parent } = req.body || {};
-    if (!name) return res.status(400).json({ message: "Thiáº¿u tÃªn danh má»¥c" });
+    if (!name) return res.status(400).json({ message: "Thiếu tên danh mục" });
     const finalSlug = slugify(slug || name);
-    if (!finalSlug) return res.status(400).json({ message: "Slug khÃ´ng há»£p lá»‡" });
+    if (!finalSlug) return res.status(400).json({ message: "Slug không hợp lệ" });
 
     if (parent && !isValidObjectId(parent)) {
-      return res.status(400).json({ message: "Parent khÃ´ng há»£p lá»‡" });
+      return res.status(400).json({ message: "Parent không hợp lệ" });
     }
 
     const exists = await Category.findOne({ slug: finalSlug });
-    if (exists) return res.status(409).json({ message: "Slug Ä‘Ã£ tá»“n táº¡i" });
-
+    if (exists) return res.status(409).json({ message: "Slug đã tồn tại" });
     const doc = await Category.create({
       name: String(name).trim(),
       slug: finalSlug,
@@ -63,43 +62,43 @@ export const createCategory = async (req, res) => {
     });
     res.status(201).json(doc);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng táº¡o Ä‘Æ°á»£c danh má»¥c", error: err.message });
+    res.status(500).json({ message: "Không tạo được danh mục", error: err.message });
   }
 };
 
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidObjectId(id)) return res.status(400).json({ message: "ID khÃ´ng há»£p lá»‡" });
+    if (!isValidObjectId(id)) return res.status(400).json({ message: "ID không hợp lệ" });
     const update = { ...req.body };
     if (update.name && !update.slug) {
       update.slug = slugify(update.name);
     }
     if (update.slug) update.slug = slugify(update.slug);
     if (update.parent && !isValidObjectId(update.parent)) {
-      return res.status(400).json({ message: "Parent khÃ´ng há»£p lá»‡" });
+      return res.status(400).json({ message: "Parent không hợp lệ" });
     }
     if (update.parent === "null") update.parent = null;
 
     const category = await Category.findByIdAndUpdate(id, update, { new: true });
-    if (!category) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y danh má»¥c" });
+    if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
     res.json(category);
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng cáº­p nháº­t Ä‘Æ°á»£c danh má»¥c", error: err.message });
+    res.status(500).json({ message: "Không cập nhật được danh mục", error: err.message });
   }
 };
 
 export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidObjectId(id)) return res.status(400).json({ message: "ID khÃ´ng há»£p lá»‡" });
+    if (!isValidObjectId(id)) return res.status(400).json({ message: "ID không hợp lệ" });
     const child = await Category.findOne({ parent: id });
-    if (child) return res.status(400).json({ message: "CÃ²n danh má»¥c con, khÃ´ng thá»ƒ xoÃ¡" });
+    if (child) return res.status(400).json({ message: "Còn danh mục con, không thể xóa" });
     const removed = await Category.findByIdAndDelete(id);
-    if (!removed) return res.status(404).json({ message: "KhÃ´ng tÃ¬m tháº¥y danh má»¥c" });
-    res.json({ message: "ÄÃ£ xÃ³a danh má»¥c" });
+    if (!removed) return res.status(404).json({ message: "Không tìm thấy danh mục" });
+    res.json({ message: "Đã xóa danh mục" });
   } catch (err) {
-    res.status(500).json({ message: "KhÃ´ng xÃ³a Ä‘Æ°á»£c danh má»¥c", error: err.message });
+    res.status(500).json({ message: "Không xóa được danh mục", error: err.message });
   }
 };
 

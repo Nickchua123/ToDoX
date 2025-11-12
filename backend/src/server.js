@@ -35,7 +35,10 @@ import bannerRoutes from "./routes/bannerRoutes.js";
 import newsRoutes from "./routes/newsRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import favoriteRoutes from "./routes/favoriteRoutes.js";
 import { connectDB } from "./config/db.js";
+import { seedAdminUser } from "./utils/seedAdminUser.js";
 
 const app = express();
 
@@ -185,6 +188,8 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 // ===== Serve frontend (also in dev if dist exists) =====
 const distPath = path.join(__dirname, "../../frontend/dist");
@@ -214,7 +219,8 @@ app.use((err, req, res, next) => {
 
 // ===== Start server after DB connection =====
 connectDB()
-  .then(() => {
+  .then(async () => {
+    await seedAdminUser();
     app.listen(PORT, () => {
       console.log(`✅ Server đang chạy tại cổng ${PORT}`);
     });
