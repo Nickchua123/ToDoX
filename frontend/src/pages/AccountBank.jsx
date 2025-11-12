@@ -1,4 +1,4 @@
-﻿import Header from "@/components/Header";
+import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 export default function AccountBank() {
   return (
@@ -22,3 +22,4 @@ export default function AccountBank() {
     </>
   );
 }
+
