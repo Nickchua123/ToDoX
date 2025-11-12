@@ -2,6 +2,7 @@ import React from "react";
 import { Toaster } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+
 import Layout from "./Layout";
 import MenList from "./pages/MenList"; // GIỮ vì ta sẽ thêm route /men
 import Home from "./pages/Home";
@@ -86,3 +87,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+
