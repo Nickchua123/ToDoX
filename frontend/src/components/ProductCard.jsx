@@ -1,18 +1,24 @@
 ﻿// src/components/ProductCard.jsx
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useFavorites } from "@/contexts/FavoriteContext";
 
 export default function ProductCard({
   id,
+  slug,
   name,
   price,
   old,
   img,
   tag,
   compact = false,
+  isFavorite = false,
+  onToggleFavorite,
 }) {
-  // Lấy id từ props hoặc đoán từ đường dẫn ảnh (giữ nguyên logic cũ)
+  const { isFavorite: markFavorite, toggleFavorite } = useFavorites();
+  // Ưu tiên slug/id được truyền xuống; fallback giữ logic cũ dựa trên đường dẫn ảnh
   const linkId = (() => {
+    if (slug) return String(slug);
     if (id) return String(id);
     if (typeof img === "string") {
       const m1 = img.match(/\/assets\/(\d+)[.-]/); // built path
@@ -31,6 +37,18 @@ export default function ProductCard({
     />
   );
 
+  const entityId = slug || id;
+  const normalizedEntityId = entityId ? String(entityId) : "";
+  const resolvedIsFavorite =
+    typeof isFavorite === "boolean"
+      ? isFavorite
+      : Boolean(normalizedEntityId && markFavorite?.(normalizedEntityId));
+  const defaultToggle =
+    !onToggleFavorite && toggleFavorite && normalizedEntityId
+      ? () => toggleFavorite(normalizedEntityId)
+      : undefined;
+  const favoriteHandler = onToggleFavorite || defaultToggle;
+
   return (
     <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden hover:-translate-y-0.5 transition">
       <div className="relative">
@@ -42,9 +60,20 @@ export default function ProductCard({
           </span>
         ) : null}
 
-        <button className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white shadow">
-          <Heart className="w-4 h-4" />
-        </button>
+        {favoriteHandler ? (
+          <button
+            type="button"
+            onClick={favoriteHandler}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white shadow transition"
+            aria-label={resolvedIsFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+          >
+            <Heart
+              className="w-4 h-4"
+              stroke={resolvedIsFavorite ? "#f97316" : "currentColor"}
+              fill={resolvedIsFavorite ? "#f97316" : "none"}
+            />
+          </button>
+        ) : null}
       </div>
 
       <div className="p-4">

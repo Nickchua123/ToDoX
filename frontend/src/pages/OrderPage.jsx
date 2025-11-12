@@ -9,9 +9,26 @@ import { getOrders } from "@/services/orderService";
 export default function OrderPage() {
   const [orders, setOrders] = useState([]);
   const [status, setStatus] = useState("all");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getOrders(status).then(setOrders);
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const data = await getOrders(status);
+        if (mounted) setOrders(data || []);
+      } catch (err) {
+        console.error("Không thể tải đơn hàng", err);
+        if (mounted) setOrders([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
   }, [status]);
 
   return (
@@ -35,7 +52,11 @@ export default function OrderPage() {
               <OrderTabs current={status} onChange={setStatus} />
 
               <div>
-                {orders.length > 0 ? (
+                {loading ? (
+                  <div className="text-center text-gray-500 mt-12">
+                    Đang tải đơn hàng...
+                  </div>
+                ) : orders.length > 0 ? (
                   orders.map((order) => (
                     <OrderCard key={order._id} order={order} />
                   ))

@@ -14,6 +14,7 @@ api.interceptors.response.use(
   async (err) => {
     const status = err.response?.status;
     const cfg = err.config || {};
+    const skipAuthRedirect = Boolean(cfg._skipAuthRedirect);
 
     // CSRF auto-retry once on 403
     if (status === 403 && !cfg._retryCSRF && !cfg.url?.includes("/auth/csrf-token")) {
@@ -29,6 +30,7 @@ api.interceptors.response.use(
     // 401 -> try refresh flow once, then redirect to login on failure
     if (
       status === 401 &&
+      !skipAuthRedirect &&
       !cfg._retryRefresh &&
       !cfg.url?.includes("/auth/refresh") &&
       !cfg.url?.includes("/auth/login")
@@ -44,7 +46,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (status === 401) {
+    if (status === 401 && !skipAuthRedirect) {
       try { sessionStorage.setItem("postLoginRedirect", window.location.pathname + window.location.search); } catch {}
       window.location.href = "/login";
     }

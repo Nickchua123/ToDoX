@@ -15,6 +15,11 @@ Backend: Node.js, Express, MongoDB (Mongoose), csurf, helmet, rate-limit, nodema
 Frontend: React + Vite, Tailwind, Radix UI, lucide-react, sonner, axios.
 Realtime: Server-Sent Events (SSE).
 
+API Ghi chú
+
+- Địa chỉ người dùng hỗ trợ endpoint `PUT /api/addresses/:id/default` để đặt địa chỉ mặc định cho tài khoản hiện tại.
+- Đánh giá sản phẩm: người dùng chỉ có thể đánh giá khi đơn hàng đã ở trạng thái `delivered`. Admin có endpoints `/api/reviews/admin/all`, `/api/reviews/:id/approve`, `/api/reviews/:id/hide` để duyệt/ẩn đánh giá.
+
 Cấu Trúc Thư Mục
 
 backend/: API Express, model, controller, middleware, router.
@@ -27,3 +32,12 @@ Yêu Cầu Môi Trường
 Node.js 18+ (khuyên dùng 20+), npm.
 Tài khoản MongoDB Atlas.
 SMTP (nếu dùng email OTP/đặt lại mật khẩu): Gmail App Password hoặc SMTP khác.
+
+Admin Mặc Định
+
+Để tự tạo một tài khoản admin khi server khởi động, thêm các biến sau vào `backend/.env`:
+
+- `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` (mật khẩu phải ≥12 ký tự, có chữ hoa, số và ký tự đặc biệt).
+- Sau khi tài khoản được seed, thêm email đó vào `ADMIN_EMAILS` để middleware `requireAdmin` nhận diện quyền admin.
+
+Đặt hàng yêu cầu cung cấp `addressId` (địa chỉ nhận hàng) khi gọi `POST /api/orders`.

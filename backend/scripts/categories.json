@@ -1,0 +1,93 @@
+[
+  {
+    "name": "Nam",
+    "slug": "nam",
+    "description": "Danh mục thời trang nam",
+    "parent": null
+  },
+  {
+    "name": "Phụ kiện nam",
+    "slug": "phu-kien-nam",
+    "parentName": "Nam"
+  },
+  { "name": "Tất nam", "slug": "tat-nam", "parentName": "Phụ kiện nam" },
+  { "name": "Túi xách nam", "slug": "tui-xach-nam", "parentName": "Phụ kiện nam" },
+  { "name": "Mũ nam", "slug": "mu-nam", "parentName": "Phụ kiện nam" },
+  { "name": "Thắt lưng nam", "slug": "that-lung-nam", "parentName": "Phụ kiện nam" },
+
+  {
+    "name": "Áo nam",
+    "slug": "ao-nam",
+    "parentName": "Nam"
+  },
+  { "name": "Áo khoác nam", "slug": "ao-khoac-nam", "parentName": "Áo nam" },
+  { "name": "Áo nỉ nam", "slug": "ao-ni-nam", "parentName": "Áo nam" },
+  { "name": "Áo len nam", "slug": "ao-len-nam", "parentName": "Áo nam" },
+  { "name": "Áo sơ mi nam", "slug": "ao-so-mi-nam", "parentName": "Áo nam" },
+
+  {
+    "name": "Quần nam",
+    "slug": "quan-nam",
+    "parentName": "Nam"
+  },
+  { "name": "Quần kaki", "slug": "quan-kaki", "parentName": "Quần nam" },
+  { "name": "Quần short nam", "slug": "quan-short-nam", "parentName": "Quần nam" },
+  { "name": "Quần jeans nam", "slug": "quan-jeans-nam", "parentName": "Quần nam" },
+  { "name": "Quần âu nam", "slug": "quan-au-nam", "parentName": "Quần nam" },
+
+  {
+    "name": "Đồ thể thao nam",
+    "slug": "do-the-thao-nam",
+    "parentName": "Nam"
+  },
+  { "name": "Quần thể thao nam", "slug": "quan-the-thao-nam", "parentName": "Đồ thể thao nam" },
+  { "name": "Áo polo thể thao nam", "slug": "ao-polo-the-thao-nam", "parentName": "Đồ thể thao nam" },
+  { "name": "Áo thun thể thao nam", "slug": "ao-thun-the-thao-nam", "parentName": "Đồ thể thao nam" },
+  { "name": "Bộ thể thao nam", "slug": "bo-the-thao-nam", "parentName": "Đồ thể thao nam" },
+
+  {
+    "name": "Nữ",
+    "slug": "nu",
+    "description": "Danh mục thời trang nữ",
+    "parent": null
+  },
+  {
+    "name": "Phụ kiện nữ",
+    "slug": "phu-kien-nu",
+    "parentName": "Nữ"
+  },
+  { "name": "Tất nữ", "slug": "tat-nu", "parentName": "Phụ kiện nữ" },
+  { "name": "Túi nữ", "slug": "tui-nu", "parentName": "Phụ kiện nữ" },
+  { "name": "Phụ kiện nữ khác", "slug": "phu-kien-nu-khac", "parentName": "Phụ kiện nữ" },
+
+  {
+    "name": "Áo nữ",
+    "slug": "ao-nu",
+    "parentName": "Nữ"
+  },
+  { "name": "Áo khoác nữ", "slug": "ao-khoac-nu", "parentName": "Áo nữ" },
+  { "name": "Áo hoodie - Áo nỉ nữ", "slug": "ao-hoodie-ao-ni-nu", "parentName": "Áo nữ" },
+  { "name": "Áo polo nữ", "slug": "ao-polo-nu", "parentName": "Áo nữ" },
+  { "name": "Áo sơ mi nữ", "slug": "ao-so-mi-nu", "parentName": "Áo nữ" },
+  { "name": "Áo thun nữ", "slug": "ao-thun-nu", "parentName": "Áo nữ" },
+
+  {
+    "name": "Quần nữ",
+    "slug": "quan-nu",
+    "parentName": "Nữ"
+  },
+  { "name": "Quần dài nữ", "slug": "quan-dai-nu", "parentName": "Quần nữ" },
+  { "name": "Quần nỉ nữ", "slug": "quan-ni-nu", "parentName": "Quần nữ" },
+  { "name": "Quần kaki nữ", "slug": "quan-kaki-nu", "parentName": "Quần nữ" },
+  { "name": "Quần jeans nữ", "slug": "quan-jeans-nu", "parentName": "Quần nữ" },
+  { "name": "Quần âu nữ", "slug": "quan-au-nu", "parentName": "Quần nữ" },
+
+  {
+    "name": "Đồ thể thao nữ",
+    "slug": "do-the-thao-nu",
+    "parentName": "Nữ"
+  },
+  { "name": "Quần thể thao nữ", "slug": "quan-the-thao-nu", "parentName": "Đồ thể thao nữ" },
+  { "name": "Áo polo thể thao nữ", "slug": "ao-polo-the-thao-nu", "parentName": "Đồ thể thao nữ" },
+  { "name": "Bộ thể thao nữ", "slug": "bo-the-thao-nu", "parentName": "Đồ thể thao nữ" }
+]

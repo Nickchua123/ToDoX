@@ -74,8 +74,8 @@ export const getProduct = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     const { name, slug, description, category, variants, price, stock, images, isPublished = true } = req.body || {};
-    if (!name || !price || !category) {
-      return res.status(400).json({ message: "Thiếu name, price hoặc category" });
+    if (!name || !slug || !price || !category) {
+      return res.status(400).json({ message: "Thiếu name, slug, price hoặc category" });
     }
     if (!isValidObjectId(category)) {
       return res.status(400).json({ message: "Category không hợp lệ" });
@@ -85,7 +85,7 @@ export const createProduct = async (req, res) => {
       return res.status(400).json({ message: "Category không tồn tại" });
     }
 
-    const productSlug = normalizeSlug(slug || name);
+    const productSlug = normalizeSlug(slug);
     if (!productSlug) return res.status(400).json({ message: "Slug không hợp lệ" });
     const existing = await Product.findOne({ slug: productSlug });
     if (existing) return res.status(409).json({ message: "Slug đã tồn tại" });
@@ -114,8 +114,8 @@ export const updateProduct = async (req, res) => {
     if (!isValidObjectId(id)) return res.status(400).json({ message: "ID không hợp lệ" });
 
     const update = { ...req.body };
-    if (update.slug || update.name) {
-      update.slug = normalizeSlug(update.slug || update.name);
+    if (update.slug) {
+      update.slug = normalizeSlug(update.slug);
     }
     if (update.category && !isValidObjectId(update.category)) {
       return res.status(400).json({ message: "Category không hợp lệ" });
