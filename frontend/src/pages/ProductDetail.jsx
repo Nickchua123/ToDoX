@@ -10,26 +10,18 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import productDetails from "../data/productDetails.js";
 import { addCartItem } from "@/services/cartService";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
+import api from "@/lib/axios";
 
 const QtyInput = ({ value, onChange }) => (
   <div className="inline-flex items-center gap-3 rounded-xl border px-3 py-2">
-    <button
-      onClick={() => onChange(Math.max(1, value - 1))}
-      className="text-sm"
-      type="button"
-    >
+    <button onClick={() => onChange(Math.max(1, value - 1))} className="text-sm" type="button">
       -
     </button>
     <span className="min-w-6 text-center text-sm">{value}</span>
-    <button
-      onClick={() => onChange(value + 1)}
-      className="text-sm"
-      type="button"
-    >
+    <button onClick={() => onChange(value + 1)} className="text-sm" type="button">
       +
     </button>
   </div>
@@ -43,13 +35,46 @@ export default function ProductDetail({ id: passedId }) {
   const [qty, setQty] = useState(1);
   const [active, setActive] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState("info");
 
-  const product = productDetails[id];
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get(`/products/${id}`);
+        setProduct(data);
+        setError("");
+      } catch (err) {
+        console.error(err);
+        setProduct(null);
+        setError("Không tìm thấy sản phẩm");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProduct();
+  }, [id]);
 
   const gallery = useMemo(() => {
-    const imgs = [product?.hero, ...(product?.images || [])].filter(Boolean);
-    return imgs.length ? imgs : [];
+    if (!product) return [];
+    if (Array.isArray(product.images) && product.images.length) return product.images;
+    return [];
   }, [product]);
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="max-w-6xl mx-auto px-4 py-12 text-center text-gray-500">
+          Đang tải thông tin sản phẩm...
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   if (!product) {
     return (
@@ -57,7 +82,7 @@ export default function ProductDetail({ id: passedId }) {
         <Header />
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
-            <h1 className="text-2xl font-semibold">Không tìm thấy sản phẩm</h1>
+            <h1 className="text-2xl font-semibold">{error || "Không tìm thấy sản phẩm"}</h1>
             <Link to="/" className="text-brand-primary underline">
               Quay lại trang chủ
             </Link>
@@ -71,37 +96,22 @@ export default function ProductDetail({ id: passedId }) {
   const next = () => setActive((a) => (a + 1) % gallery.length);
   const prev = () => setActive((a) => (a - 1 + gallery.length) % gallery.length);
 
-  const [tab, setTab] = useState("info");
-  const tabLabels = {
-    info: "Thông tin sản phẩm",
-    policy: "Chính sách đổi trả",
-    review: "Đánh giá sản phẩm",
-  };
-
-  const related = useMemo(() => {
-    const arr = (product.related || []).filter((r) => String(r.id) !== String(id));
-    return arr.slice(0, 3);
-  }, [product, id]);
-
   const handleAddToCart = async (redirect) => {
-    if (!product?.id) {
+    if (!product?._id) {
       toast.error("Không xác định được sản phẩm để thêm vào giỏ.");
       return;
     }
     try {
       setAdding(true);
       await addCartItem({
-        productId: product.id,
+        productId: product._id,
         quantity: qty,
       });
       await refreshCart();
       toast.success("Đã thêm vào giỏ hàng");
-      if (redirect) {
-        navigate("/checkout");
-      }
+      if (redirect) navigate("/checkout");
     } catch (err) {
-      const message =
-        err?.response?.data?.message || "Không thể thêm sản phẩm vào giỏ.";
+      const message = err?.response?.data?.message || "Không thể thêm sản phẩm vào giỏ.";
       toast.error(message);
     } finally {
       setAdding(false);
@@ -119,7 +129,7 @@ export default function ProductDetail({ id: passedId }) {
                 <div className="flex md:flex-col gap-3 overflow-auto no-scrollbar">
                   {gallery.map((img, i) => (
                     <button
-                      key={i}
+                      key={img + i}
                       onClick={() => setActive(i)}
                       type="button"
                       className={`h-16 w-full overflow-hidden rounded-xl bg-gray-100 ring-1 ${
@@ -132,39 +142,49 @@ export default function ProductDetail({ id: passedId }) {
                 </div>
 
                 <div className="rounded-2xl overflow-hidden relative bg-gray-100 ring-1 ring-gray-200">
-                  <img
-                    src={gallery[active]}
-                    alt={product.name}
-                    className="w-full h-[420px] object-contain bg-gray-100"
-                  />
-                  <button
-                    onClick={prev}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 ring-1 ring-gray-200 hover:bg-white"
-                    type="button"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={next}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 ring-1 ring-gray-200 hover:bg-white"
-                    type="button"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  {gallery.length ? (
+                    <img src={gallery[active]} alt={product.name} className="w-full h-[420px] object-contain bg-gray-100" />
+                  ) : (
+                    <div className="w-full h-[420px] grid place-items-center text-gray-400">Không có ảnh</div>
+                  )}
+                  {gallery.length > 1 && (
+                    <>
+                      <button
+                        onClick={prev}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 ring-1 ring-gray-200 hover:bg-white"
+                        type="button"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={next}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 ring-1 ring-gray-200 hover:bg-white"
+                        type="button"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                {product.variant ? (
-                  <p className="text-sm uppercase tracking-[0.3em] text-gray-500">{product.variant}</p>
-                ) : null}
                 <h1 className="text-3xl font-semibold text-brand-dark">{product.name}</h1>
-                <p className="text-2xl font-bold text-brand-primary">{product.price}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-2xl font-bold text-brand-primary">
+                    {product.price?.toLocaleString("vi-VN")}₫
+                  </p>
+                  {product.oldPrice ? (
+                    <span className="text-gray-400 line-through">
+                      {product.oldPrice?.toLocaleString("vi-VN")}₫
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
-              <p className="text-sm text-gray-600 leading-relaxed">{product.desc}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
 
               <div className="flex items-center gap-3">
                 <QtyInput value={qty} onChange={setQty} />
@@ -189,18 +209,12 @@ export default function ProductDetail({ id: passedId }) {
               <div className="space-y-3 rounded-2xl border bg-[#fffaf6] p-4">
                 <p className="text-sm font-semibold text-brand-dark">Ưu đãi & vận chuyển</p>
                 <div className="space-y-2 text-sm text-gray-600">
-                  {(product.shipping || []).map((s, i) => {
-                    const Icon = [Truck, BadgePercent, RotateCcw, Headphones][i] || Truck;
-                    return (
-                      <div key={i} className="flex items-center gap-2">
-                        <Icon className="w-4 h-4 text-brand-primary" />
-                        <div>
-                          <p className="font-medium text-brand-dark">{s.title}</p>
-                          <p>{s.sub}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {[Truck, BadgePercent, RotateCcw, Headphones].map((Icon, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Icon className="w-4 h-4 text-brand-primary" />
+                      <p>{["Giao hàng toàn quốc", "Giảm giá thành viên", "Đổi trả 7 ngày", "Hỗ trợ 24/7"][i]}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -209,98 +223,44 @@ export default function ProductDetail({ id: passedId }) {
           {/* Tabs */}
           <div className="px-6 pb-8">
             <div className="flex gap-6 justify-center border-b">
-              {[{ id: "info" }, { id: "policy" }, { id: "review" }].map((t) => (
+              {["info", "policy", "review"].map((t) => (
                 <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={t}
+                  onClick={() => setTab(t)}
                   className={`py-2 ${
-                    tab === t.id ? "text-brand-primary border-b-2 border-brand-primary" : "text-gray-500"
+                    tab === t ? "text-brand-primary border-b-2 border-brand-primary" : "text-gray-500"
                   }`}
                   type="button"
                 >
-                  {tabLabels[t.id]}
+                  {t === "info"
+                    ? "Thông tin sản phẩm"
+                    : t === "policy"
+                    ? "Chính sách đổi trả"
+                    : "Đánh giá sản phẩm"}
                 </button>
               ))}
             </div>
 
             <div className="mt-6 text-sm text-gray-700 leading-6 max-w-4xl mx-auto">
               {tab === "info" && (
-                <div>
-                  {Array.isArray(product.info) ? (
-                    <ul className="list-disc pl-6 space-y-1">
-                      {product.info.map((l, i) => (
-                        <li key={i}>{l}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>{product.desc}</p>
-                  )}
+                <div className="space-y-3">
+                  <p>{product.detail || product.description}</p>
+                  {product.colors?.length ? (
+                    <p className="text-gray-600">Màu sắc: {product.colors.join(", ")}</p>
+                  ) : null}
+                  {product.sizes?.length ? (
+                    <p className="text-gray-600">Kích cỡ: {product.sizes.join(", ")}</p>
+                  ) : null}
                 </div>
               )}
 
               {tab === "policy" && (
-                <div>
-                  {Array.isArray(product.policy) ? (
-                    <div className="space-y-3">
-                      {product.policy.map((sec, i) => (
-                        <div key={i}>
-                          {sec.title ? <div className="font-medium mb-1">{sec.title}</div> : null}
-                          {sec.lines ? (
-                            <ul className="list-disc pl-6 space-y-1">
-                              {sec.lines.map((l, j) => (
-                                <li key={j}>{l}</li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>Áp dụng theo chính sách hiện hành.</p>
-                  )}
-                </div>
+                <p>Áp dụng theo chính sách đổi trả của cửa hàng (7 ngày, giữ nguyên tem mác).</p>
               )}
 
-              {tab === "review" && (
-                <div className="space-y-3">
-                  {Array.isArray(product.reviews) && product.reviews.length ? (
-                    product.reviews.map((rv, i) => (
-                      <div key={i}>
-                        <div className="font-medium">
-                          {rv.name} • {rv.rating}/5
-                        </div>
-                        <p className="text-gray-600">{rv.text}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p>Chưa có đánh giá.</p>
-                  )}
-                </div>
-              )}
+              {tab === "review" && <p>Chưa có đánh giá.</p>}
             </div>
           </div>
-
-          {/* Related */}
-          {related.length ? (
-            <div className="px-6 pb-8">
-              <h2 className="text-xl font-semibold text-brand-dark text-center mb-4">Sản phẩm liên quan</h2>
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto">
-                {related.map((r) => (
-                  <Link
-                    key={r.id}
-                    to={`/p/${r.id}`}
-                    className="block bg-white rounded-2xl border shadow-card overflow-hidden"
-                  >
-                    <img src={r.img} className="w-full h-56 object-cover" alt={r.name} />
-                    <div className="p-3">
-                      <div className="text-sm text-gray-700 line-clamp-2">{r.name}</div>
-                      <div className="mt-1 text-brand-primary font-semibold">{r.price}</div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
       <Footer />
