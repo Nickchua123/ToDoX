@@ -3,8 +3,27 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Address from "../models/Address.js";
 import { isAdminUser } from "../middleware/admin.js";
+import { createNotification, NotificationType } from "../utils/notification.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const STATUS_LABELS = {
+  pending: "Chờ xác nhận",
+  processing: "Đang xử lý",
+  shipped: "Đang giao",
+  delivered: "Đã giao",
+  cancelled: "Đã hủy",
+  refunded: "Hoàn tiền",
+};
+
+const normalizeOptions = (options = {}) => {
+  const color = options.color ? String(options.color).trim() : undefined;
+  const size = options.size ? String(options.size).trim() : undefined;
+  return {
+    ...(color ? { color } : {}),
+    ...(size ? { size } : {}),
+  };
+};
 
 const enrichItems = async (items) => {
   if (!Array.isArray(items) || items.length === 0) {
@@ -14,6 +33,7 @@ const enrichItems = async (items) => {
     productId: item.productId || item.product,
     quantity: Number(item.quantity) || 0,
     variant: item.variantId || item.variant,
+    options: normalizeOptions(item.options || {}),
   }));
   const productIds = normalized.map((i) => i.productId).filter(isValidObjectId);
   if (productIds.length !== normalized.length) throw new Error("productId không hợp lệ");
@@ -35,6 +55,7 @@ const enrichItems = async (items) => {
       price: product.price,
       quantity: item.quantity,
       image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined,
+      options: item.options,
     };
   });
 
@@ -44,7 +65,7 @@ const enrichItems = async (items) => {
 
 export const createOrder = async (req, res) => {
   try {
-    const { items, addressId, notes, shippingFee = 0, discount = 0 } = req.body || {};
+    const { items, addressId, notes, shippingFee = 0, discount = 0, paymentMethod = "cod" } = req.body || {};
     if (!addressId) {
       return res.status(400).json({ message: "Thiếu địa chỉ nhận hàng" });
     }
@@ -68,6 +89,7 @@ export const createOrder = async (req, res) => {
       total: subtotal + finalShipping - finalDiscount,
       address: addressId,
       notes,
+      paymentMethod: paymentMethod || "cod",
     });
 
     await Promise.all(
@@ -77,6 +99,13 @@ export const createOrder = async (req, res) => {
     );
 
     res.status(201).json(order);
+    createNotification({
+      user: req.userId,
+      type: NotificationType.ORDER,
+      title: "Đặt hàng thành công",
+      message: `Đơn hàng #${order._id} đã được tạo và chờ xác nhận.`,
+      data: { orderId: order._id, status: order.status },
+    });
   } catch (err) {
     res.status(400).json({ message: err.message || "Không tạo được đơn hàng" });
   }
@@ -166,6 +195,13 @@ export const updateOrderStatus = async (req, res) => {
     const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
     if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     res.json(order);
+    createNotification({
+      user: order.user,
+      type: NotificationType.ORDER,
+      title: "Đơn hàng được cập nhật",
+      message: `Đơn hàng #${order._id} hiện ở trạng thái ${STATUS_LABELS[status] || status}.`,
+      data: { orderId: order._id, status },
+    });
   } catch (err) {
     res.status(500).json({ message: "Không cập nhật được đơn hàng", error: err.message });
   }
@@ -196,6 +232,13 @@ export const cancelOrder = async (req, res) => {
       )
     );
     res.json(order);
+    createNotification({
+      user: order.user,
+      type: NotificationType.ORDER,
+      title: "Đơn hàng đã được hủy",
+      message: `Bạn đã hủy đơn hàng #${order._id}${reason ? ` (${reason})` : ""}.`,
+      data: { orderId: order._id, status: order.status },
+    });
   } catch (err) {
     res.status(500).json({ message: "Không hủy được đơn hàng", error: err.message });
   }
@@ -243,6 +286,13 @@ export const confirmOrderDelivery = async (req, res) => {
     order.deliveredAt = new Date();
     await order.save();
     res.json(order);
+    createNotification({
+      user: order.user,
+      type: NotificationType.ORDER,
+      title: "Đơn hàng đã giao",
+      message: `Đơn hàng #${order._id} đã được xác nhận giao thành công.`,
+      data: { orderId: order._id, status: order.status },
+    });
   } catch (err) {
     res.status(500).json({ message: "Không xác nhận được đơn hàng", error: err.message });
   }

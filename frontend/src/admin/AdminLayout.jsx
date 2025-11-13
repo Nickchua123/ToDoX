@@ -12,16 +12,18 @@ import {
   ChevronRight,
   Megaphone,
   Newspaper,
+  Ticket,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const menus = [
-  { to: "/admin", icon: LayoutDashboard, label: "Tổng quan" },
+  { to: "/admin", icon: LayoutDashboard, label: "Tổng quan", end: true },
   { to: "/admin/products", icon: Package, label: "Sản phẩm" },
   { to: "/admin/users", icon: Users, label: "Người dùng" },
   { to: "/admin/categories", icon: Tags, label: "Danh mục" },
   { to: "/admin/orders", icon: ShoppingCart, label: "Đơn hàng" },
   { to: "/admin/reviews", icon: Tags, label: "Đánh giá" },
+  { to: "/admin/coupons", icon: Ticket, label: "Mã giảm giá" },
   { to: "/admin/banners", icon: Megaphone, label: "Banner" },
   { to: "/admin/news", icon: Newspaper, label: "Tin tức" },
 ];
@@ -71,10 +73,10 @@ export default function AdminLayout() {
 
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto px-2 space-y-1">
-          {menus.map(({ to, icon, label }) => {
+          {menus.map(({ to, icon, label, end }) => {
             const IconComponent = icon;
             return (
-              <NavLink key={to} to={to} className={linkCls}>
+              <NavLink key={to} to={to} end={end} className={linkCls}>
                 <IconComponent className="w-4 h-4" />
                 {!collapsed && <span>{label}</span>}
               </NavLink>

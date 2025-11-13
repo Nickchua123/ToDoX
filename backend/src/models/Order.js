@@ -8,6 +8,10 @@ const orderItemSchema = new mongoose.Schema(
     price: { type: Number, required: true },      // Giá chốt tại thời điểm đặt
     quantity: { type: Number, required: true },
     image: { type: String },                      // Ảnh thumbnail
+    options: {
+      color: { type: String },
+      size: { type: String },
+    },
   },
   { _id: false }
 );
@@ -51,6 +55,8 @@ const orderSchema = new mongoose.Schema(
 
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
+    paymentMethod: { type: String, default: "cod" },
+    paymentRef: { type: String },
 
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },

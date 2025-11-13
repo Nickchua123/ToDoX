@@ -52,6 +52,10 @@ export function FavoriteProvider({ children }) {
   const toggleFavorite = useCallback(
     async (productId) => {
       if (!productId) return;
+      if (!user) {
+        toast.error("Vui lòng đăng nhập để dùng tính năng yêu thích");
+        return;
+      }
       try {
         const normalized = normalizeId(productId);
         if (!normalized) return;
@@ -66,7 +70,7 @@ export function FavoriteProvider({ children }) {
         toast.error("Không cập nhật được yêu thích");
       }
     },
-    [favoriteIds, loadFavorites, normalizeId]
+    [favoriteIds, loadFavorites, normalizeId, user]
   );
 
   const value = useMemo(

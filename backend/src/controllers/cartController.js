@@ -5,6 +5,19 @@ import Variant from "../models/Variant.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+const normalizeOptions = (options = {}) => {
+  const color = options.color ? String(options.color).trim() : undefined;
+  const size = options.size ? String(options.size).trim() : undefined;
+  return {
+    ...(color ? { color } : {}),
+    ...(size ? { size } : {}),
+  };
+};
+
+const sameOptions = (a = {}, b = {}) => {
+  return (a.color || "") === (b.color || "") && (a.size || "") === (b.size || "");
+};
+
 const getOrCreateCart = async (userId) => {
   const existing = await Cart.findOne({ user: userId });
   if (existing) return existing;
@@ -31,7 +44,7 @@ export const getCart = async (req, res) => {
 
 export const addItem = async (req, res) => {
   try {
-    const { productId, variantId, quantity = 1 } = req.body || {};
+    const { productId, variantId, quantity = 1, options = {} } = req.body || {};
     const product = await loadProduct(productId);
     if (variantId && !isValidObjectId(variantId)) {
       return res.status(400).json({ message: "variantId không hợp lệ" });
@@ -43,15 +56,23 @@ export const addItem = async (req, res) => {
     if (quantity <= 0) return res.status(400).json({ message: "Số lượng phải > 0" });
 
     const cart = await getOrCreateCart(req.userId);
+    const normalizedOptions = normalizeOptions(options);
     const idx = cart.items.findIndex(
       (item) =>
         item.product.toString() === productId &&
-        ((variantId && item.variant?.toString() === variantId) || (!variantId && !item.variant))
+        ((variantId && item.variant?.toString() === variantId) || (!variantId && !item.variant)) &&
+        sameOptions(item.options, normalizedOptions)
     );
     if (idx >= 0) {
       cart.items[idx].quantity += Number(quantity);
+      cart.items[idx].options = normalizedOptions;
     } else {
-      cart.items.push({ product: productId, variant: variantId || undefined, quantity: Number(quantity) });
+      cart.items.push({
+        product: productId,
+        variant: variantId || undefined,
+        quantity: Number(quantity),
+        options: normalizedOptions,
+      });
     }
     cart.updatedAt = new Date();
     await cart.save();

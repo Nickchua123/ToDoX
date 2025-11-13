@@ -23,7 +23,7 @@ export default function CheckoutPage() {
   const [cartData, setCartData] = useState({ cart: null, subtotal: 0 });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState("bank");
+  const [selectedPayment, setSelectedPayment] = useState("cod");
   const [coupon, setCoupon] = useState("");
   const [shippingFee] = useState(0);
   const [notes, setNotes] = useState("");
@@ -85,32 +85,51 @@ export default function CheckoutPage() {
       toast.error("Vui lòng chọn địa chỉ giao hàng.");
       return;
     }
+    let redirected = false;
     try {
       setPlacingOrder(true);
       const headers = await prepareCsrfHeaders();
-      await api.post(
+      const { data: order } = await api.post(
         "/orders",
         {
           items: items.map((item) => ({
             productId: item.product?._id || item.product,
             quantity: item.quantity,
             variant: item.variant?._id || item.variant,
+            options: item.options || {},
           })),
           addressId: selectedAddress,
           notes,
           shippingFee,
           discount,
+          paymentMethod: selectedPayment,
         },
         { headers }
       );
+      if (selectedPayment === "vnpay") {
+        const { data } = await api.post(
+          "/payments/vnpay/create",
+          { orderId: order?._id },
+          { headers }
+        );
+        if (!data?.paymentUrl) {
+          throw new Error("Không nhận được liên kết thanh toán");
+        }
+        await clearCartApi();
+        redirected = true;
+        window.location.href = data.paymentUrl;
+        return;
+      }
       await clearCartApi();
       toast.success("Đặt hàng thành công!");
       navigate("/orders");
     } catch (err) {
-      const message = err?.response?.data?.message || "Đặt hàng thất bại.";
+      const message = err?.response?.data?.message || err.message || "Đặt hàng thất bại.";
       toast.error(message);
     } finally {
-      setPlacingOrder(false);
+      if (!redirected) {
+        setPlacingOrder(false);
+      }
     }
   };
 
@@ -218,22 +237,6 @@ export default function CheckoutPage() {
                         <input
                           type="radio"
                           name="pay"
-                          checked={selectedPayment === "bank"}
-                          onChange={() => setSelectedPayment("bank")}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">Chuyển khoản</div>
-                          <div className="text-sm text-gray-500">
-                            Thông tin chuyển khoản sẽ được gửi khi đặt hàng
-                          </div>
-                        </div>
-                        <div className="text-xl">🏦</div>
-                      </label>
-
-                      <label className="flex items-center gap-3 p-4">
-                        <input
-                          type="radio"
-                          name="pay"
                           checked={selectedPayment === "cod"}
                           onChange={() => setSelectedPayment("cod")}
                         />
@@ -244,6 +247,22 @@ export default function CheckoutPage() {
                           </div>
                         </div>
                         <div className="text-xl">📦</div>
+                      </label>
+
+                      <label className="flex items-center gap-3 p-4">
+                        <input
+                          type="radio"
+                          name="pay"
+                          checked={selectedPayment === "vnpay"}
+                          onChange={() => setSelectedPayment("vnpay")}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium">VNPAY (QR/Thẻ)</div>
+                          <div className="text-sm text-gray-500">
+                            Chuyển đến cổng VNPAY để thanh toán an toàn
+                          </div>
+                        </div>
+                        <div className="text-xl">💳</div>
                       </label>
                     </div>
                   </div>

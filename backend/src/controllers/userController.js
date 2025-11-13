@@ -1,6 +1,7 @@
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
+import { getAdminEmailSet } from "../middleware/admin.js";
 
 const sanitizeName = (name) => String(name || "").trim();
 
@@ -87,13 +88,25 @@ export const listUsers = async (req, res) => {
     const perPage = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
     const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * perPage;
     const [items, total] = await Promise.all([
-      User.find(query).select("username name email phone gender dateOfBirth createdAt role")
+      User.find(query)
+        .select("username name email phone gender dateOfBirth createdAt role")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(perPage),
+        .limit(perPage)
+        .lean(),
       User.countDocuments(query),
     ]);
-    res.json({ total, page: Number(page) || 1, items });
+
+    const adminEmails = getAdminEmailSet();
+    const normalized = items.map((user) => {
+      const email = String(user.email || "").toLowerCase();
+      return {
+        ...user,
+        role: user.role || (adminEmails.has(email) ? "admin" : "customer"),
+      };
+    });
+
+    res.json({ total, page: Number(page) || 1, items: normalized });
   } catch (err) {
     res.status(500).json({ message: "Không lấy được danh sách người dùng", error: err.message });
   }

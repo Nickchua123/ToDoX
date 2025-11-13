@@ -27,6 +27,7 @@
     "multer": "^2.0.2",
     "todox": "file:..",
     "validator": "^13.11.0",
+    "vnpay": "^2.4.4",
     "xss": "^1.0.15",
     "xss-clean": "^0.1.4"
   },

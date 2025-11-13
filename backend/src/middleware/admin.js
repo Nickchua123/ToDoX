@@ -6,7 +6,7 @@ const parseAdminEmails = () =>
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
 
-const getAdminEmailSet = () => new Set(parseAdminEmails());
+export const getAdminEmailSet = () => new Set(parseAdminEmails());
 const allowedRoles = new Set(["admin", "staff"]);
 
 export const isAdminUser = async (userId) => {

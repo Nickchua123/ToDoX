@@ -30,7 +30,7 @@ export default function ReviewsAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   const loadReviews = async ({ nextStatus = status, nextPage = page } = {}) => {
     try {
@@ -42,7 +42,7 @@ export default function ReviewsAdmin() {
       if (nextStatus !== "all") params.set("status", nextStatus);
       const { data } = await api.get(`/reviews/admin/all?${params.toString()}`);
       setReviews(data?.items || []);
-      setTotal(data?.total || 0);
+      setTotalCount(data?.total || 0);
       setPage(data?.page || nextPage);
     } catch (err) {
       const message = err?.response?.data?.message || "Không tải được đánh giá";
@@ -101,7 +101,7 @@ export default function ReviewsAdmin() {
     }
   };
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)), [totalCount]);
 
   return (
     <section className="space-y-4">
@@ -234,7 +234,7 @@ export default function ReviewsAdmin() {
         </div>
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 text-sm text-slate-600">
           <span>
-            Trang {page}/{totalPages} — Tổng {total} đánh giá
+            Trang {page}/{totalPages} — Tổng {totalCount} đánh giá
           </span>
           <div className="flex gap-2">
             <button
