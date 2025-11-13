@@ -1,6 +1,6 @@
 import React from "react";
 import { Toaster } from "sonner";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 
 import Layout from "./Layout";
@@ -17,14 +17,23 @@ import NewsPage2 from "./pages/NewsPage2";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderPage from "./pages/OrderPage";
+import AdminRoute from "./components/AdminRoute";
+import StoreRoute from "./components/StoreRoute";
+import AdminLayout from "./admin/AdminLayout.jsx";
+import ProductsAdmin from "./admin/pages/ProductsAdmin.jsx";
+import UsersAdmin from "./admin/pages/UsersAdmin.jsx";
+import CategoriesAdmin from "./admin/pages/CategoriesAdmin.jsx";
+import OrdersAdmin from "./admin/pages/OrdersAdmin.jsx";
+import ReviewsAdmin from "./admin/pages/ReviewsAdmin.jsx";
+import BannersAdmin from "./admin/pages/BannersAdmin.jsx";
+import NewsAdmin from "./admin/pages/NewsAdmin.jsx";
+import DashboardAdmin from "./admin/pages/DashboardAdmin.jsx";
 import AddressPage from "./pages/AddressPage";
 import PaymentPage from "./pages/PaymentPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import NotificationsPage from "./pages/NotificationsPage";
-import KycPage from "./pages/KycPage";
 import AccountLayout from "./components/AccountLayout";
 import AccountProfile from "./pages/AccountProfile";
-import AccountBank from "./pages/AccountBank";
 import AccountPassword from "./pages/AccountPassword";
 import AccountVouchers from "./pages/AccountVouchers";
 import AccountXu from "./pages/AccountXu";
@@ -34,9 +43,9 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyCode from "./pages/VerifyCode";
 import NotFound from "./pages/NotFound";
-import { CartProvider } from "./contexts/CartContext";
-import { AuthProvider } from "./contexts/AuthContext";
-import { FavoriteProvider } from "./contexts/FavoriteContext";
+import { CartProvider } from "./contexts/cart-provider";
+import { AuthProvider } from "./contexts/auth-provider";
+import { FavoriteProvider } from "./contexts/favorite-provider";
 
 export default function App() {
   return (
@@ -46,7 +55,8 @@ export default function App() {
           <Toaster richColors />
           <BrowserRouter>
             <Routes>
-              <Route element={<Layout />}>
+              <Route element={<StoreRoute />}>
+                <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/men" element={<MenList />} />
                 <Route path="/p/:id" element={<ProductDetail />} />
@@ -68,17 +78,28 @@ export default function App() {
                 <Route path="/verify" element={<VerifyCode />} />
                 <Route path="/account" element={<AccountLayout />}>
                   <Route path="profile" element={<AccountProfile />} />
-                  <Route path="bank" element={<AccountBank />} />
                   <Route path="address" element={<AddressPage />} />
                   <Route path="password" element={<AccountPassword />} />
                   <Route path="payment" element={<PaymentPage />} />
                   <Route path="privacy" element={<PrivacyPage />} />
-                  <Route path="kyc" element={<KycPage />} />
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="vouchers" element={<AccountVouchers />} />
                   <Route path="xu" element={<AccountXu />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
+              </Route>
+            </Route>
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<DashboardAdmin />} />
+                  <Route path="products" element={<ProductsAdmin />} />
+                  <Route path="users" element={<UsersAdmin />} />
+                  <Route path="categories" element={<CategoriesAdmin />} />
+                  <Route path="orders" element={<OrdersAdmin />} />
+                  <Route path="reviews" element={<ReviewsAdmin />} />
+                  <Route path="banners" element={<BannersAdmin />} />
+                  <Route path="news" element={<NewsAdmin />} />
+                </Route>
               </Route>
             </Routes>
           </BrowserRouter>

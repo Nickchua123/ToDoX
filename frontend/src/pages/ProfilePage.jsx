@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { useNavigate } from "react-router";
@@ -7,19 +7,20 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const res = await api.get("/auth/profile", { withCredentials: true });
       setUser(res.data);
-    } catch (error) {
+    } catch (err) {
+      console.error("Không thể tải hồ sơ", err);
       toast.error("Bạn cần đăng nhập trước!");
       navigate("/unauthorized");
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   if (!user) {
     return (

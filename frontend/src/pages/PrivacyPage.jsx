@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/axios";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 import { toast } from "sonner";

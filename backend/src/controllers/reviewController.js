@@ -8,23 +8,38 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 export const listReviews = async (req, res) => {
   try {
-    const { product, page = 1, limit = 10 } = req.query;
+    const { product, page = 1, limit = 10, includeStats } = req.query;
     const query = { approved: true, hidden: { $ne: true } };
     if (product) {
       if (!isValidObjectId(product)) return res.status(400).json({ message: "productId không hợp lệ" });
-      query.product = product;
+      query.product = new mongoose.Types.ObjectId(product);
     }
     const perPage = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
     const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * perPage;
-    const [items, total] = await Promise.all([
+    const [items, total, summary] = await Promise.all([
       Review.find(query)
         .populate("user", "name")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(perPage),
       Review.countDocuments(query),
+      includeStats === "true"
+        ? Review.aggregate([
+            { $match: query },
+            {
+              $group: {
+                _id: null,
+                average: { $avg: "$rating" },
+                count: { $sum: 1 },
+              },
+            },
+          ]).then((stats) => ({
+            average: stats?.[0]?.average || 0,
+            total: stats?.[0]?.count || 0,
+          }))
+        : Promise.resolve(null),
     ]);
-    res.json({ total, page: Number(page) || 1, items });
+    res.json({ total, page: Number(page) || 1, items, summary });
   } catch (err) {
     res.status(500).json({ message: "Không lấy được đánh giá", error: err.message });
   }

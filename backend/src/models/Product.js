@@ -4,14 +4,17 @@ const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
-    description: { type: String, default: "" },
+    description: { type: String, default: "" }, // mô tả ngắn
+    detail: { type: String, default: "" }, // mô tả dài (thông tin sản phẩm)
     category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
-    variants: [{ type: mongoose.Schema.Types.ObjectId, ref: "Variant" }],
     price: { type: Number, required: true },
+    oldPrice: { type: Number }, // giá gốc
     stock: { type: Number, default: 0 },
-    images: [{ type: String }],
-    isPublished: { type: Boolean, default: true },
+    colors: [{ type: String }], // ví dụ ["Hồng be", "Xám", "Đen"]
+    sizes: [{ type: String }], // ví dụ ["S", "M", "L", "XL"]
+    images: [{ type: String }], // các link ảnh Cloudinary
     rating: { type: Number, default: 0 },
+    isPublished: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

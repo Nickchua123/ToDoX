@@ -73,7 +73,6 @@ const MALE_REQUIRE = [
 
 const looksFemale = (name = "", img = "") => {
   const n = normalize(name);
-  const p = normalize(img || "");
   const hitText = FEMALE_BLOCK.some((k) => n.includes(k));
   const hitPath = /(women|nu|dress|skirt|dam|vay)/i.test(img || "");
   return hitText || hitPath;
@@ -81,7 +80,6 @@ const looksFemale = (name = "", img = "") => {
 
 const looksMale = (name = "", img = "") => {
   const n = normalize(name);
-  const p = normalize(img || "");
   const hitText = MALE_REQUIRE.some((k) => n.includes(k));
   const hitPath = /(men|nam|jacket|shirt|jean|belt)/i.test(img || "");
   return hitText || hitPath;

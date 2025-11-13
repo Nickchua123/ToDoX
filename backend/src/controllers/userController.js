@@ -1,4 +1,5 @@
 import validator from "validator";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 
 const sanitizeName = (name) => String(name || "").trim();
@@ -86,7 +87,7 @@ export const listUsers = async (req, res) => {
     const perPage = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
     const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * perPage;
     const [items, total] = await Promise.all([
-      User.find(query).select("name email createdAt")
+      User.find(query).select("username name email phone gender dateOfBirth createdAt role")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(perPage),
@@ -100,7 +101,7 @@ export const listUsers = async (req, res) => {
 
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select("name email createdAt");
+    const user = await User.findById(req.params.userId).select("name email role createdAt");
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json(user);
   } catch (err) {
@@ -115,8 +116,14 @@ export const updateUser = async (req, res) => {
       if (!validator.isEmail(String(req.body.email))) return res.status(400).json({ message: "Email không hợp lệ" });
       update.email = String(req.body.email).trim().toLowerCase();
     }
+    if (typeof req.body?.role !== "undefined") {
+      const role = String(req.body.role).toLowerCase();
+      const allowedRoles = ["admin", "staff", "customer"];
+      if (!allowedRoles.includes(role)) return res.status(400).json({ message: "Role không hợp lệ" });
+      update.role = role;
+    }
     const user = await User.findByIdAndUpdate(req.params.userId, update, { new: true }).select(
-      "username name email phone gender dateOfBirth avatar updatedAt"
+      "username name email phone gender dateOfBirth avatar updatedAt role"
     );
     if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json(user);
@@ -142,5 +149,51 @@ export const requestDeleteAccount = async (req, res) => {
     res.json({ message: "Đã ghi nhận yêu cầu xóa tài khoản", deleteRequestedAt: user.deleteRequestedAt });
   } catch (err) {
     res.status(500).json({ message: "Không gửi được yêu cầu xóa", error: err.message });
+  }
+};
+
+export const createUser = async (req, res) => {
+  try {
+    const { name, email, password, username, phone, gender, role } = req.body || {};
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Vui lòng nhập tên, email và mật khẩu" });
+    }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!validator.isEmail(normalizedEmail)) return res.status(400).json({ message: "Email không hợp lệ" });
+    const existingEmail = await User.exists({ email: normalizedEmail });
+    if (existingEmail) return res.status(409).json({ message: "Email đã tồn tại" });
+    const normalizedUsername = username ? String(username).trim() : normalizedEmail.split("@")[0];
+    if (normalizedUsername.length < 3) {
+      return res.status(400).json({ message: "Username tối thiểu 3 ký tự" });
+    }
+    const existingUsername = await User.exists({ username: normalizedUsername });
+    if (existingUsername) return res.status(409).json({ message: "Username đã tồn tại" });
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    const normalizedRole = ["admin", "staff", "customer"].includes(role) ? role : "customer";
+    const user = await User.create({
+      name: sanitizeName(name),
+      email: normalizedEmail,
+      username: normalizedUsername,
+      password: passwordHash,
+      phone: phone || null,
+      gender: ["Nam", "Nữ", "Khác"].includes(gender) ? gender : "Khác",
+      role: normalizedRole,
+    });
+    const safe = user.toObject();
+    delete safe.password;
+    res.status(201).json(safe);
+  } catch (err) {
+    res.status(500).json({ message: "Không tạo được người dùng", error: err.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const removed = await User.findByIdAndDelete(userId);
+    if (!removed) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    res.json({ message: "Đã xóa người dùng" });
+  } catch (err) {
+    res.status(500).json({ message: "Không xóa được người dùng", error: err.message });
   }
 };

@@ -1,7 +1,7 @@
 ﻿// src/components/ProductCard.jsx
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useFavorites } from "@/contexts/FavoriteContext";
+import { useFavorites } from "@/hooks/useFavorites";
 
 export default function ProductCard({
   id,
@@ -78,9 +78,8 @@ export default function ProductCard({
 
       <div className="p-4">
         <div
-          className={`${
-            compact ? "text-[13px]" : "text-sm"
-          } text-gray-700 line-clamp-2 min-h-[44px] leading-snug`}
+          className={`${compact ? "text-[13px]" : "text-sm"} text-gray-700 leading-snug min-h-[44px] overflow-hidden`}
+          style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
         >
           {name}
         </div>

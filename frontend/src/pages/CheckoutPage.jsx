@@ -8,6 +8,7 @@ import {
   clearCart as clearCartApi,
 } from "@/services/cartService";
 import api from "@/lib/axios";
+import { prepareCsrfHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 
 const currency = (v) =>
@@ -54,7 +55,7 @@ export default function CheckoutPage() {
     loadData();
   }, []);
 
-  const items = cartData.cart?.items || [];
+  const items = useMemo(() => cartData.cart?.items || [], [cartData]);
 
   const subtotal = useMemo(
     () =>
@@ -86,17 +87,22 @@ export default function CheckoutPage() {
     }
     try {
       setPlacingOrder(true);
-      await api.post("/orders", {
-        items: items.map((item) => ({
-          productId: item.product?._id || item.product,
-          quantity: item.quantity,
-          variant: item.variant?._id || item.variant,
-        })),
-        addressId: selectedAddress,
-        notes,
-        shippingFee,
-        discount,
-      });
+      const headers = await prepareCsrfHeaders();
+      await api.post(
+        "/orders",
+        {
+          items: items.map((item) => ({
+            productId: item.product?._id || item.product,
+            quantity: item.quantity,
+            variant: item.variant?._id || item.variant,
+          })),
+          addressId: selectedAddress,
+          notes,
+          shippingFee,
+          discount,
+        },
+        { headers }
+      );
       await clearCartApi();
       toast.success("Đặt hàng thành công!");
       navigate("/orders");

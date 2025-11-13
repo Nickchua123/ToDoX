@@ -4,7 +4,8 @@ import api from "@/lib/axios";
 import { useNavigate, Link } from "react-router-dom";
 import Turnstile from "@/components/Turnstile";
 import { prepareCsrfHeaders } from "@/lib/csrf";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Eye, EyeOff } from "lucide-react";
 
 const inputClass =
   "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition";
@@ -15,6 +16,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [captcha, setCaptcha] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,9 +30,29 @@ const LoginPage = () => {
       const payload = { ...formData };
       if (captcha) payload.turnstileToken = captcha;
       await api.post("/auth/login", payload, { withCredentials: true, headers });
-      await refreshAuth();
+      const profile = await refreshAuth();
       toast.success("Đăng nhập thành công!");
-      navigate("/");
+      const storedRedirect = (() => {
+        try {
+          const value = sessionStorage.getItem("postLoginRedirect");
+          sessionStorage.removeItem("postLoginRedirect");
+          return value;
+        } catch {
+          return null;
+        }
+      })();
+      const isAdmin = Boolean(
+        profile?.isAdmin ||
+          profile?.role === "admin" ||
+          profile?.role === "staff"
+      );
+      if (isAdmin) {
+        navigate("/admin", { replace: true });
+      } else if (storedRedirect) {
+        navigate(storedRedirect, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Sai tài khoản hoặc mật khẩu!");
     } finally {
@@ -63,15 +85,26 @@ const LoginPage = () => {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-600">Mật khẩu</label>
-              <input
-                type="password"
-                name="password"
-                placeholder="********"
-                className={inputClass}
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="********"
+                  className={`${inputClass} pr-10`}
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="text-right text-sm">

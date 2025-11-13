@@ -5,11 +5,21 @@ import crypto from "crypto";
 import User from "../models/User.js";
 import PendingRegistration from "../models/PendingRegistration.js";
 import { sendMail } from "../utils/mailer.js";
+import { isAdminUser } from "../middleware/admin.js";
 // Kiểm tra độ mạnh mật khẩu
 const isStrongPassword = (pwd) => {
   const s = String(pwd || "");
   if (s.length < 12) return false;
   return /[A-Z]/.test(s) && /\d/.test(s) && /[^A-Za-z0-9]/.test(s);
+};
+const normalizeUsername = (value, fallback = "") => {
+  const base =
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || fallback;
+  return base || `user${Date.now()}`;
 };
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const isProd = process.env.NODE_ENV === "production";
@@ -46,8 +56,8 @@ export const registerStart = async (req, res) => {
     }
     //Kiem tra ton tai email va ten dang nhap
     const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedName = String(name).trim().toLowerCase();
-    const existingUser = await User.findOne({ name: normalizedName });
+    const normalizedUsername = normalizeUsername(name, normalizedEmail.split("@")[0]);
+    const existingUser = await User.findOne({ username: normalizedUsername });
     if (existingUser) return res.status(400).json({ message: "Tên người dùng đã tồn tại" });
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(400).json({ message: "Email đã tồn tại" });
@@ -65,6 +75,7 @@ export const registerStart = async (req, res) => {
       {
         email: normalizedEmail,
         name: String(name).trim(),
+        username: normalizedUsername,
         passwordHash,
         codeHash,
         expiresAt,
@@ -109,11 +120,22 @@ export const registerVerify = async (req, res) => {
       await pending.save();
       return res.status(400).json({ message: "Mã không chính xác", attemptsRemaining: Math.max(0, 5 - pending.attempts) });
     }
-    const dup = await User.exists({ $or: [{ email: normalizedEmail }, { name: String(pending.name).trim().toLowerCase() }] });
-    if (dup) {
-      return res.status(409).json({ message: "Email hoặc tên người dùng đã tồn tại" });
+    const baseUsername = pending.username || normalizeUsername(pending.name, normalizedEmail.split("@")[0]);
+    let finalUsername = baseUsername;
+    let suffix = 1;
+    while (await User.exists({ username: finalUsername })) {
+      finalUsername = `${baseUsername}-${suffix++}`;
     }
-    const user = await User.create({ name: pending.name, email: normalizedEmail, password: pending.passwordHash });
+    const dupEmail = await User.exists({ email: normalizedEmail });
+    if (dupEmail) {
+      return res.status(409).json({ message: "Email đã tồn tại" });
+    }
+    const user = await User.create({
+      name: pending.name,
+      username: finalUsername,
+      email: normalizedEmail,
+      password: pending.passwordHash,
+    });
     await PendingRegistration.deleteOne({ _id: pending._id });
     return res.status(201).json({ message: "Đăng ký thành công", userId: user._id });
   } catch (err) {
@@ -191,7 +213,9 @@ export const profile = async (req, res) => {
     }
     const user = await User.findById(userId).select("-password");
     if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
-    res.status(200).json(user);
+    const plain = user.toObject({ getters: true, virtuals: true });
+    plain.isAdmin = await isAdminUser(userId);
+    res.status(200).json(plain);
   } catch (err) {
     res.status(401).json({ message: "Token không hợp lệ" });
   }

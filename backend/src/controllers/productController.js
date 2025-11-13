@@ -73,7 +73,20 @@ export const getProduct = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    const { name, slug, description, category, variants, price, stock, images, isPublished = true } = req.body || {};
+    const {
+      name,
+      slug,
+      description,
+      detail,
+      category,
+      price,
+      oldPrice,
+      stock,
+      colors,
+      sizes,
+      images,
+      isPublished = true,
+    } = req.body || {};
     if (!name || !slug || !price || !category) {
       return res.status(400).json({ message: "Thiếu name, slug, price hoặc category" });
     }
@@ -94,10 +107,13 @@ export const createProduct = async (req, res) => {
       name: String(name).trim(),
       slug: productSlug,
       description: description || "",
+      detail: detail || "",
       category,
-      variants: Array.isArray(variants) ? variants : [],
       price,
+      oldPrice: Number.isFinite(oldPrice) ? oldPrice : undefined,
       stock: Number.isFinite(stock) ? stock : 0,
+      colors: Array.isArray(colors) ? colors : [],
+      sizes: Array.isArray(sizes) ? sizes : [],
       images: Array.isArray(images) ? images : [],
       isPublished: Boolean(isPublished),
     });
@@ -123,6 +139,16 @@ export const updateProduct = async (req, res) => {
     if (update.category) {
       const existsCategory = await Category.exists({ _id: update.category });
       if (!existsCategory) return res.status(400).json({ message: "Category không tồn tại" });
+    }
+
+    if (update.colors && !Array.isArray(update.colors)) {
+      update.colors = [];
+    }
+    if (update.sizes && !Array.isArray(update.sizes)) {
+      update.sizes = [];
+    }
+    if (update.images && !Array.isArray(update.images)) {
+      update.images = [];
     }
 
     const product = await Product.findByIdAndUpdate(id, update, { new: true });

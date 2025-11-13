@@ -9,12 +9,15 @@ function Select({ value, defaultValue, onValueChange, children }) {
   const isControlled = typeof value !== "undefined";
   const current = isControlled ? value : internal;
 
-  const setValue = (v) => {
-    if (!isControlled) setInternal(v);
-    onValueChange?.(v);
-  };
+  const setValue = React.useCallback(
+    (v) => {
+      if (!isControlled) setInternal(v);
+      onValueChange?.(v);
+    },
+    [isControlled, onValueChange]
+  );
 
-  const ctx = React.useMemo(() => ({ open, setOpen, value: current, setValue }), [open, current]);
+  const ctx = React.useMemo(() => ({ open, setOpen, value: current, setValue }), [open, current, setValue]);
   return <SelectContext.Provider value={ctx}>{children}</SelectContext.Provider>;
 }
 

@@ -11,7 +11,7 @@ import {
   removeCartItem,
 } from "@/services/cartService";
 import { toast } from "sonner";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/hooks/useCart";
 
 const formatCurrency = (value) =>
   Number(value || 0).toLocaleString("vi-VN", {
@@ -50,7 +50,7 @@ export default function CartPage() {
     loadCart();
   }, []);
 
-  const items = cartData.cart?.items || [];
+  const items = useMemo(() => cartData.cart?.items || [], [cartData]);
   const total = useMemo(
     () =>
       items.reduce(

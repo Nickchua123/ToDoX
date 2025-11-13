@@ -12,17 +12,36 @@ const slugify = (value) =>
 
 export const listCategories = async (req, res) => {
   try {
-    const { q, parent } = req.query;
+    const { q, parent, page, limit } = req.query;
     const query = {};
     if (q) {
       const rx = new RegExp(String(q).trim(), "i");
       query.$or = [{ name: rx }, { slug: rx }];
     }
-    if (parent) {
-      query.parent = parent === "null" ? null : parent;
+    if (typeof parent !== "undefined") {
+      if (parent === "null") query.parent = null;
+      else if (parent === "notnull") query.parent = { $ne: null };
+      else query.parent = parent;
     }
-    const categories = await Category.find(query).sort({ createdAt: -1 });
-    res.json(categories);
+
+    const usePagination = typeof page !== "undefined";
+    if (!usePagination) {
+      const categories = await Category.find(query).sort({ createdAt: -1 });
+      return res.json(categories);
+    }
+
+    const perPage = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+    const skip = (pageNumber - 1) * perPage;
+
+    const [items, total] = await Promise.all([
+      Category.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(perPage),
+      Category.countDocuments(query),
+    ]);
+    res.json({ total, page: pageNumber, items });
   } catch (err) {
     res.status(500).json({ message: "Không lấy được danh mục", error: err.message });
   }
