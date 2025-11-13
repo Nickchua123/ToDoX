@@ -65,7 +65,7 @@ const LoginPage = () => {
       <div className="w-full max-w-md">
         <div className="bg-white/90 backdrop-blur border border-orange-100 shadow-xl rounded-3xl p-8 space-y-6">
           <div className="text-center space-y-2">
-            <p className="text-xs font-semibold tracking-[0.4em] text-gray-400">ND STYLE</p>
+            <p className="text-xs font-semibold tracking-[0.4em] text-gray-400">DL SHOP</p>
             <h1 className="text-3xl font-semibold text-brand-dark">Chào mừng trở lại</h1>
             <p className="text-sm text-gray-500">Đăng nhập để trải nghiệm các ưu đãi mới nhất</p>
           </div>

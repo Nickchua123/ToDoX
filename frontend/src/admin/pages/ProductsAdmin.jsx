@@ -4,7 +4,7 @@ import api from "@/lib/axios";
 import { toast } from "sonner";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const blankForm = {
   name: "",
   slug: "",

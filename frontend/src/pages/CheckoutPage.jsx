@@ -1,5 +1,5 @@
 // src/pages/CheckoutPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,6 +10,7 @@ import {
 import api from "@/lib/axios";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
+import { getGhnFee, getGhnServices } from "@/services/shippingService";
 
 const currency = (v) =>
   Number(v || 0).toLocaleString("vi-VN", {
@@ -18,6 +19,26 @@ const currency = (v) =>
     maximumFractionDigits: 0,
   });
 
+const normalizeTimestamp = (value) => {
+  if (!value && value !== 0) return null;
+  const num = Number(value);
+  if (!Number.isNaN(num)) {
+    return num > 1e12 ? num : num * 1000;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const formatLeadTime = (value) => {
+  const normalized = normalizeTimestamp(value);
+  if (!normalized) return null;
+  try {
+    return new Date(normalized).toLocaleDateString("vi-VN");
+  } catch {
+    return null;
+  }
+};
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [cartData, setCartData] = useState({ cart: null, subtotal: 0 });
@@ -25,7 +46,17 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("cod");
   const [coupon, setCoupon] = useState("");
-  const [shippingFee] = useState(0);
+  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingOptions, setShippingOptions] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
+  const [shippingPackage, setShippingPackage] = useState({
+    weight: 0,
+    length: 30,
+    width: 20,
+    height: 10,
+  });
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -74,7 +105,14 @@ export default function CheckoutPage() {
       : 0;
   }, [coupon, subtotal, items.length]);
 
-  const total = subtotal - discount + shippingFee;
+  const total = useMemo(
+    () => subtotal - discount + shippingFee,
+    [subtotal, discount, shippingFee]
+  );
+  const selectedAddressObj = useMemo(
+    () => addresses.find((addr) => addr._id === selectedAddress),
+    [addresses, selectedAddress]
+  );
 
   const handlePlaceOrder = async () => {
     if (!items.length) {
@@ -89,6 +127,32 @@ export default function CheckoutPage() {
     try {
       setPlacingOrder(true);
       const headers = await prepareCsrfHeaders();
+      const shippingPayload =
+        selectedService &&
+        selectedAddressObj?.districtId &&
+        selectedAddressObj?.wardCode
+          ? {
+              provider: "ghn",
+              selection: {
+                serviceId: selectedService.service_id,
+                service_id: selectedService.service_id,
+                serviceTypeId: selectedService.service_type_id,
+                service_type_id: selectedService.service_type_id,
+                serviceName:
+                  selectedService.short_name || selectedService.service_name,
+                serviceCode: selectedService.service_code,
+                short_name: selectedService.short_name,
+                toDistrictId: selectedAddressObj.districtId,
+                toWardCode: selectedAddressObj.wardCode,
+                expected_delivery_time:
+                  selectedService.expected_delivery_time ||
+                  selectedService.leadtime,
+                fee: shippingFee,
+                receiverPhone: selectedAddressObj.phone,
+              },
+              package: shippingPackage,
+            }
+          : null;
       const { data: order } = await api.post(
         "/orders",
         {
@@ -103,6 +167,7 @@ export default function CheckoutPage() {
           shippingFee,
           discount,
           paymentMethod: selectedPayment,
+          ...(shippingPayload ? { shipping: shippingPayload } : {}),
         },
         { headers }
       );
@@ -138,6 +203,112 @@ export default function CheckoutPage() {
     0
   );
 
+  const estimatePackage = useCallback(() => {
+    const quantity = totalItems || 1;
+    const weight = Math.max(300, quantity * 400);
+    return {
+      weight,
+      length: 30,
+      width: 20,
+      height: Math.max(10, Math.round(quantity * 5)),
+    };
+  }, [totalItems]);
+
+  const fetchShippingQuote = useCallback(
+    async (address, preferredServiceId) => {
+      if (!address?.districtId || !address?.wardCode) {
+        setShippingOptions([]);
+        setSelectedService(null);
+        setShippingFee(0);
+        setShippingError(
+          "Địa chỉ chưa có mã quận/huyện hoặc phường/xã. Vui lòng cập nhật địa chỉ."
+        );
+        return;
+      }
+      if (!items.length) {
+        setShippingOptions([]);
+        setSelectedService(null);
+        setShippingFee(0);
+        return;
+      }
+      const pkg = estimatePackage();
+      setShippingPackage(pkg);
+      setShippingLoading(true);
+      setShippingError("");
+      try {
+        const services = await getGhnServices({ toDistrictId: address.districtId });
+        if (!Array.isArray(services) || services.length === 0) {
+          setShippingOptions([]);
+          setSelectedService(null);
+          setShippingFee(0);
+          setShippingError("Không có dịch vụ GHN phù hợp tại khu vực này.");
+          return;
+        }
+        setShippingOptions(services);
+        const chosen =
+          services.find(
+            (service) =>
+              preferredServiceId &&
+              String(service.service_id) === String(preferredServiceId)
+          ) || services[0];
+        const feeRes = await getGhnFee({
+          service_type_id: chosen.service_type_id,
+          service_id: chosen.service_id,
+          to_district_id: address.districtId,
+          to_ward_code: address.wardCode,
+          weight: pkg.weight,
+          length: pkg.length,
+          width: pkg.width,
+          height: pkg.height,
+        });
+        const feeValue = Number(
+          feeRes?.total ??
+            feeRes?.total_fee ??
+            feeRes?.service_fee ??
+            feeRes?.data?.total ??
+            0
+        );
+        setShippingFee(feeValue);
+        const expectedTime = normalizeTimestamp(
+          feeRes?.expected_delivery_time || feeRes?.leadtime || chosen.leadtime
+        );
+        setSelectedService({
+          ...chosen,
+          fee: feeValue,
+          expected_delivery_time: expectedTime,
+        });
+        setShippingError("");
+      } catch (err) {
+        console.error(err);
+        setShippingOptions([]);
+        setSelectedService(null);
+        setShippingFee(0);
+        setShippingError(
+          err?.response?.data?.message || "Không tính được phí giao hàng."
+        );
+      } finally {
+        setShippingLoading(false);
+      }
+    },
+    [estimatePackage, items.length]
+  );
+
+  useEffect(() => {
+    if (selectedAddressObj && items.length) {
+      fetchShippingQuote(selectedAddressObj);
+    } else {
+      setShippingOptions([]);
+      setSelectedService(null);
+      setShippingFee(0);
+      setShippingError("");
+    }
+  }, [selectedAddressObj, items.length, fetchShippingQuote]);
+
+  const handleServiceChange = (serviceId) => {
+    if (!selectedAddressObj) return;
+    fetchShippingQuote(selectedAddressObj, serviceId);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -146,7 +317,7 @@ export default function CheckoutPage() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 bg-white rounded-xl p-8 shadow-sm">
             <h1 className="text-3xl font-semibold text-[#0b84a5] mb-6">
-              ND Style
+              DL Shop
             </h1>
 
             {loading ? (
@@ -204,7 +375,9 @@ export default function CheckoutPage() {
                           <div className="text-sm text-gray-600">
                             {addr.line1}
                             {addr.line2 ? `, ${addr.line2}` : ""},{" "}
-                            {addr.ward}, {addr.district}, {addr.city}
+                            {addr.wardName || addr.ward},{" "}
+                            {addr.districtName || addr.district},{" "}
+                            {addr.city || addr.provinceName || ""}
                           </div>
                           {addr.isDefault ? (
                             <span className="text-xs text-sky-600">
@@ -223,11 +396,74 @@ export default function CheckoutPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                   <div>
-                    <h2 className="text-lg font-semibold mb-4">Vận chuyển</h2>
-                    <div className="p-4 rounded-md bg-sky-50 text-sky-700">
-                      Chúng tôi sẽ liên hệ để xác nhận phí vận chuyển (hiện tại
-                      miễn phí).
-                    </div>
+                    <h2 className="text-lg font-semibold mb-4">
+                      Phương thức giao hàng
+                    </h2>
+                    {shippingLoading ? (
+                      <div className="p-4 rounded-md border border-dashed text-sm text-gray-500">
+                        Đang tính phí vận chuyển...
+                      </div>
+                    ) : shippingError ? (
+                      <div className="p-4 rounded-md border border-rose-200 bg-rose-50 text-rose-700 text-sm">
+                        {shippingError}
+                      </div>
+                    ) : shippingOptions.length ? (
+                      <div className="space-y-3">
+                        {shippingOptions.map((option) => {
+                          const checked =
+                            selectedService &&
+                            String(selectedService.service_id) ===
+                              String(option.service_id);
+                          return (
+                            <label
+                              key={option.service_id}
+                              className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer ${
+                                checked
+                                  ? "border-sky-500 bg-sky-50"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="shipping"
+                                checked={checked}
+                                onChange={() =>
+                                  handleServiceChange(option.service_id)
+                                }
+                              />
+                              <div className="flex-1">
+                              <div className="font-medium">
+                                {option.short_name || option.service_name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Dự kiến:{" "}
+                                {(() => {
+                                  const label =
+                                    checked && selectedService?.expected_delivery_time
+                                      ? formatLeadTime(
+                                          selectedService.expected_delivery_time
+                                        )
+                                      : formatLeadTime(option.leadtime);
+                                  return label || "Liên hệ";
+                                })()}
+                              </div>
+                            </div>
+                              <div className="font-semibold text-sm min-w-[90px] text-right">
+                                {selectedService?.service_id ===
+                                option.service_id
+                                  ? currency(shippingFee)
+                                  : "~"}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-md border border-dashed text-sm text-gray-500">
+                        Hãy chọn địa chỉ có quận/huyện và phường/xã hợp lệ để
+                        tính phí vận chuyển.
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -398,4 +634,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-

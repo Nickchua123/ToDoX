@@ -36,6 +36,8 @@ const calcTag = (price, oldPrice) => {
   return Math.round(((oldPrice - price) / oldPrice) * 100);
 };
 
+const PAGE_SIZE = 9;
+
 export default function CategoryPage() {
   const [sort, setSort] = useState("default");
   const [searchParams] = useSearchParams();
@@ -44,36 +46,7 @@ export default function CategoryPage() {
   const [products, setProducts] = useState([]);
   const [loadingCategory, setLoadingCategory] = useState(false);
   const [comingSoon, setComingSoon] = useState(true);
-  const [roundCategories, setRoundCategories] = useState([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-
-  const railRef = useRef(null);
-  const firstItemRef = useRef(null);
-
-  useEffect(() => {
-    let ignore = false;
-    const fetchCategories = async () => {
-      try {
-        setCategoriesLoading(true);
-        const { data } = await api.get("/categories?parent=null&limit=200");
-        if (ignore) return;
-        const list = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-        setRoundCategories(list);
-      } catch (err) {
-        if (!ignore) {
-          console.error(err);
-          toast.error("Không tải được danh mục");
-          setRoundCategories([]);
-        }
-      } finally {
-        if (!ignore) setCategoriesLoading(false);
-      }
-    };
-    fetchCategories();
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let ignore = false;
@@ -147,6 +120,29 @@ export default function CategoryPage() {
     }
   }, [products, sort]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [activeSlug, sort, products.length]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(sortedProducts.length / PAGE_SIZE)),
+    [sortedProducts.length]
+  );
+
+  useEffect(() => {
+    setPage((prev) => {
+      if (prev > totalPages) return totalPages;
+      if (prev < 1) return 1;
+      return prev;
+    });
+  }, [totalPages]);
+
+  const finalProducts = useMemo(() => {
+    const current = Math.min(page, totalPages);
+    const start = (current - 1) * PAGE_SIZE;
+    return sortedProducts.slice(start, start + PAGE_SIZE);
+  }, [page, sortedProducts, totalPages]);
+
   const scrollOne = (dir = 1) => {
     const rail = railRef.current;
     const first = firstItemRef.current;
@@ -156,7 +152,6 @@ export default function CategoryPage() {
     rail.scrollBy({ left: dir * delta, behavior: "smooth" });
   };
 
-  const finalProducts = sortedProducts;
   const comingSoonText = activeSlug
     ? "Sản phẩm sẽ sớm được cập nhật."
     : "Chọn một danh mục để xem sản phẩm.";
@@ -169,13 +164,18 @@ export default function CategoryPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold">{categoryTitle}</h1>
 
-          <div className="flex items-center gap-2 relative z-50">
+          <div className="flex items-center gap-2 relative z-0">
             <span className="text-gray-700 text-sm font-medium">Sắp xếp theo</span>
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Mặc định" />
               </SelectTrigger>
-              <SelectContent className="z-[1000] bg-white border shadow-lg rounded-lg">
+              <SelectContent
+                align="start"
+                position="popper"
+                sideOffset={4}
+                className="z-[60] bg-white border shadow-lg rounded-lg min-w-[160px]"
+              >
                 <SelectItem value="default">Mặc định</SelectItem>
                 <SelectItem value="az">A → Z</SelectItem>
                 <SelectItem value="za">Z → A</SelectItem>
@@ -189,47 +189,7 @@ export default function CategoryPage() {
 
       <section className="py-10">
         <div className="max-w-7xl mx-auto px-6 relative">
-          <button
-            aria-label="Prev"
-            onClick={() => scrollOne(-1)}
-            className="hidden md:flex absolute -left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full border bg-white shadow hover:bg-gray-50"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-
-          <div
-            ref={railRef}
-            className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {categoriesLoading ? (
-              <div className="text-sm text-gray-500">Đang tải danh mục...</div>
-            ) : roundCategories.length === 0 ? (
-              <div className="text-sm text-gray-500">Chưa có danh mục nào.</div>
-            ) : (
-              roundCategories.map((c, i) => (
-                <div
-                  key={c._id || i}
-                  ref={i === 0 ? firstItemRef : null}
-                  className="snap-start shrink-0"
-                  style={{ width: 180 }}
-                >
-                  <CategoryRound
-                    label={c.name}
-                    img={c.image || "/logo.png"}
-                    slug={c.slug || c._id}
-                  />
-                </div>
-              ))
-            )}
-          </div>
-
-          <button
-            aria-label="Next"
-            onClick={() => scrollOne(1)}
-            className="hidden md:flex absolute -right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full border bg-white shadow hover:bg-gray-50"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+        <div className="text-sm text-gray-500">Danh mục carousel đang tạm ẩn.</div>
         </div>
       </section>
 
@@ -248,6 +208,29 @@ export default function CategoryPage() {
             {finalProducts.map((p) => (
               <ProductCard key={p.id || p.slug || p.img} {...p} />
             ))}
+            {totalPages > 1 && !loadingCategory && !comingSoon && (
+              <div className="col-span-full mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page <= 1}
+                  className="px-4 py-2 rounded-lg border border-gray-200 disabled:opacity-40"
+                >
+                  Trang trước
+                </button>
+                <span>
+                  Trang {page} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page >= totalPages}
+                  className="px-4 py-2 rounded-lg border border-gray-200 disabled:opacity-40"
+                >
+                  Trang sau
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="hidden lg:block col-span-3 space-y-6">

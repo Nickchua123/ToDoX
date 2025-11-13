@@ -60,6 +60,15 @@ const orderSchema = new mongoose.Schema(
 
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
+
+    shippingProvider: { type: String, default: "manual" },
+    shippingServiceName: { type: String },
+    shippingServiceCode: { type: String },
+    shippingServiceTypeId: { type: Number },
+    shippingTrackingCode: { type: String },
+    shippingClientOrderCode: { type: String },
+    shippingStatus: { type: String },
+    shippingMeta: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

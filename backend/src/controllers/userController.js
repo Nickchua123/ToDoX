@@ -100,9 +100,10 @@ export const listUsers = async (req, res) => {
     const adminEmails = getAdminEmailSet();
     const normalized = items.map((user) => {
       const email = String(user.email || "").toLowerCase();
+      const inferredAdmin = adminEmails.has(email);
       return {
         ...user,
-        role: user.role || (adminEmails.has(email) ? "admin" : "customer"),
+        role: inferredAdmin ? "admin" : user.role || "customer",
       };
     });
 

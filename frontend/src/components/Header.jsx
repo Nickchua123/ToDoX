@@ -93,14 +93,14 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b">
       <div className="bg-brand-primary text-white text-center py-1 text-xs">
-        CHÀO ĐÓN BỘ SƯU TẬP THU ĐÔNG 2024
+        CHÀO ĐÓN BỘ SƯU TẬP THU ĐÔNG 2025
       </div>
 
       <div className="max-w-6xl mx-auto px-4 relative" ref={navRef}>
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link to="/" className="text-xl font-bold text-brand-dark hover:text-brand-primary transition">
-            ND Style
+            DL Shop
           </Link>
 
           {/* Menu */}

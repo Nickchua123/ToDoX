@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="mt-16 border-t">
       <div className="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-4 gap-8 text-sm">
         <div>
-          <div className="text-lg font-bold text-brand-dark">ND Style</div>
+		  <div className="text-lg font-bold text-brand-dark">DL Shop</div>
           <p className="text-gray-600 mt-3">Công ty ND Theme – Hệ thống cửa hàng thời trang.</p>
         </div>
         <div>

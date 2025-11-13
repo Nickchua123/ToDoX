@@ -39,6 +39,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import favoriteRoutes from "./routes/favoriteRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import shippingRoutes from "./routes/shippingRoutes.js";
 import { connectDB } from "./config/db.js";
 import { seedAdminUser } from "./utils/seedAdminUser.js";
 
@@ -194,6 +195,7 @@ app.use("/api/uploads", uploadRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/shipping", shippingRoutes);
 
 // ===== Serve frontend (also in dev if dist exists) =====
 const distPath = path.join(__dirname, "../../frontend/dist");
