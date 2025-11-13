@@ -11,6 +11,12 @@ const addressSchema = new mongoose.Schema(
     ward: { type: String, required: true },
     phone: { type: String, required: true },
     isDefault: { type: Boolean, default: false },
+    provinceId: { type: Number },
+    districtId: { type: Number },
+    wardCode: { type: String },
+    provinceName: { type: String },
+    districtName: { type: String },
+    wardName: { type: String },
   },
   { timestamps: true }
 );

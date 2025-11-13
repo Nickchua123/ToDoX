@@ -9,13 +9,40 @@ const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 export const listReviews = async (req, res) => {
   try {
     const { product, page = 1, limit = 10, includeStats } = req.query;
-    const query = { approved: true, hidden: { $ne: true } };
+    const query = { approved: true, hidden: false };
     if (product) {
       if (!isValidObjectId(product)) return res.status(400).json({ message: "productId không hợp lệ" });
       query.product = new mongoose.Types.ObjectId(product);
     }
     const perPage = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
     const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * perPage;
+    const matchStage = {
+      approved: true,
+      hidden: false,
+      ...(query.product ? { product: query.product } : {}),
+    };
+
+    const summaryPromise = includeStats === "true"
+      ? Review.aggregate([
+          { $match: matchStage },
+          {
+            $group: {
+              _id: null,
+              average: { $avg: "$rating" },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+          .then((stats) => ({
+            average: stats?.[0]?.average || 0,
+            total: stats?.[0]?.count || 0,
+          }))
+          .catch((err) => {
+            console.error("[reviews] summary aggregate error", err);
+            return null;
+          })
+      : Promise.resolve(null);
+
     const [items, total, summary] = await Promise.all([
       Review.find(query)
         .populate("user", "name")
@@ -23,21 +50,7 @@ export const listReviews = async (req, res) => {
         .skip(skip)
         .limit(perPage),
       Review.countDocuments(query),
-      includeStats === "true"
-        ? Review.aggregate([
-            { $match: query },
-            {
-              $group: {
-                _id: null,
-                average: { $avg: "$rating" },
-                count: { $sum: 1 },
-              },
-            },
-          ]).then((stats) => ({
-            average: stats?.[0]?.average || 0,
-            total: stats?.[0]?.count || 0,
-          }))
-        : Promise.resolve(null),
+      summaryPromise,
     ]);
     res.json({ total, page: Number(page) || 1, items, summary });
   } catch (err) {

@@ -14,7 +14,22 @@ export const listAddresses = async (req, res) => {
 
 export const createAddress = async (req, res) => {
   try {
-    const { label, line1, line2, city, district, ward, phone, isDefault } = req.body || {};
+    const {
+      label,
+      line1,
+      line2,
+      city,
+      district,
+      ward,
+      phone,
+      isDefault,
+      provinceId,
+      districtId,
+      wardCode,
+      provinceName,
+      districtName,
+      wardName,
+    } = req.body || {};
     if (!line1 || !city || !district || !ward || !phone) {
       return res.status(400).json({ message: "Thiếu thông tin địa chỉ" });
     }
@@ -31,6 +46,12 @@ export const createAddress = async (req, res) => {
       ward,
       phone,
       isDefault: Boolean(isDefault),
+      provinceId,
+      districtId,
+      wardCode,
+      provinceName,
+      districtName,
+      wardName,
     });
     res.status(201).json(address);
   } catch (err) {

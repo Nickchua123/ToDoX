@@ -1,10 +1,11 @@
 ﻿import { useEffect, useRef, useState } from "react";
-import { Heart, Search, ShoppingCart, User, ChevronDown } from "lucide-react";
+import { Heart, Search, ShoppingCart, User, ChevronDown, Bell } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/axios";
 import { toast } from "sonner";
+import { fetchNotifications, NOTIFICATIONS_EVENT } from "@/services/notificationService";
 
 export default function Header() {
   const { totalItems } = useCart();
@@ -15,6 +16,7 @@ export default function Header() {
     female: [],
     male: [],
   });
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigate = useNavigate();
   const menuRef = useRef(null);
   const navRef = useRef(null);
@@ -46,6 +48,42 @@ export default function Header() {
     loadCategories();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let active = true;
+    let intervalId;
+
+    const loadUnread = async () => {
+      if (!user) {
+        if (active) setUnreadNotifications(0);
+        return;
+      }
+      try {
+        const data = await fetchNotifications({ page: 1, limit: 1 });
+        if (active) setUnreadNotifications(data?.unreadCount || 0);
+      } catch (err) {
+        console.warn("Không tải được số thông báo chưa đọc", err);
+        if (active) setUnreadNotifications(0);
+      }
+    };
+
+    const handleSync = () => {
+      loadUnread();
+    };
+
+    loadUnread();
+    window.addEventListener(NOTIFICATIONS_EVENT, handleSync);
+    if (user) {
+      intervalId = setInterval(loadUnread, 60000);
+    }
+
+    return () => {
+      active = false;
+      window.removeEventListener(NOTIFICATIONS_EVENT, handleSync);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user?._id]);
+
   const handleLogout = async () => {
     await logout();
     setMenuOpen(false);
@@ -55,14 +93,14 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b">
       <div className="bg-brand-primary text-white text-center py-1 text-xs">
-        CHÀO ĐÓN BỘ SƯU TẬP THU ĐÔNG 2024
+        CHÀO ĐÓN BỘ SƯU TẬP THU ĐÔNG 2025
       </div>
 
       <div className="max-w-6xl mx-auto px-4 relative" ref={navRef}>
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link to="/" className="text-xl font-bold text-brand-dark hover:text-brand-primary transition">
-            ND Style
+            DL Shop
           </Link>
 
           {/* Menu */}
@@ -95,6 +133,20 @@ export default function Header() {
             {/* Yêu thích */}
             <Link to="/favorites" className="p-2 rounded-xl hover:bg-gray-100 inline-flex items-center justify-center" title="Yêu thích">
               <Heart className="w-5 h-5" />
+            </Link>
+
+            {/* Thông báo */}
+            <Link
+              to="/account/notifications"
+              className="p-2 rounded-xl hover:bg-gray-100 relative inline-flex items-center justify-center"
+              title="Thông báo"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 rounded-full bg-indigo-600 text-white text-[10px] px-1.5 py-0.5">
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </span>
+              )}
             </Link>
 
             {/* Giỏ hàng */}
@@ -193,59 +245,82 @@ const MegaMenuPanel = ({ groups, onClose }) => {
       onMouseLeave={onClose}
       className="absolute left-1/2 top-full z-40 -translate-x-1/2 mt-3 w-[720px] rounded-3xl border border-gray-100 bg-white shadow-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-6"
     >
-      {groups.map((group) => (
-        <div key={group.title}>
-          {group.slug ? (
-            <Link
-              to={`/category?slug=${group.slug}`}
-              className="font-semibold mb-2 text-gray-900 inline-flex items-center gap-1 hover:text-brand-primary transition"
-              onClick={onClose}
-            >
-              {group.title}
-              <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
-            </Link>
-          ) : (
-            <h3 className="font-semibold mb-2 text-gray-900">{group.title}</h3>
-          )}
-          <ul className="space-y-1 text-sm text-gray-600">
-            {group.items.map((item) => (
-              <li key={`${group.title}-${item.slug || item.name}`}>
-                <Link
-                  to={item.slug ? `/category?slug=${item.slug}` : "#"}
-                  className="hover:text-brand-primary"
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      {groups.map((group) => {
+        const parentSlug = group.slug || group.id;
+        return (
+          <div key={group.id || group.slug || group.title}>
+            {parentSlug ? (
+              <Link
+                to={`/category?slug=${parentSlug}`}
+                className="font-semibold mb-2 text-gray-900 inline-flex items-center gap-1 hover:text-brand-primary transition"
+                onClick={onClose}
+              >
+                {group.title}
+                <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
+              </Link>
+            ) : (
+              <h3 className="font-semibold mb-2 text-gray-900">{group.title}</h3>
+            )}
+            <ul className="space-y-1 text-sm text-gray-600">
+              {group.items.map((item) => {
+                const childSlug = item.slug || item.id;
+                return (
+                  <li key={`${group.title}-${childSlug || item.name}`}>
+                    {childSlug ? (
+                      <Link
+                        to={`/category?slug=${childSlug}`}
+                        className="hover:text-brand-primary"
+                        onClick={onClose}
+                      >
+                        {item.name}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-600">{item.name}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 const buildMegaMenu = (categories) => {
   const children = new Map();
+  const toKey = (value) => {
+    if (!value) return null;
+    return typeof value === "string" ? value : value.toString();
+  };
+
   categories.forEach((cat) => {
-    if (!cat.parent) return;
-    const list = children.get(cat.parent) || [];
+    const parentKey = toKey(cat.parent);
+    if (!parentKey) return;
+    const list = children.get(parentKey) || [];
     list.push(cat);
-    children.set(cat.parent, list);
+    children.set(parentKey, list);
   });
 
   const mapRoot = (rootName) => {
     const root = categories.find((cat) => cat.name === rootName);
-    if (!root) return [];
-    const secondLevel = children.get(root._id) || [];
-    return secondLevel.map((group) => ({
-      title: group.name,
-      slug: group.slug,
-      items: (children.get(group._id) || []).map((item) => ({
-        name: item.name,
-        slug: item.slug,
-      })),
-    }));
+    const rootKey = toKey(root?._id);
+    if (!rootKey) return [];
+    const secondLevel = children.get(rootKey) || [];
+    return secondLevel.map((group) => {
+      const groupKey = toKey(group._id);
+      return {
+        title: group.name,
+        slug: group.slug,
+        id: groupKey,
+        items: (children.get(groupKey) || []).map((item) => ({
+          name: item.name,
+          slug: item.slug,
+          id: toKey(item._id),
+        })),
+      };
+    });
   };
 
   return {

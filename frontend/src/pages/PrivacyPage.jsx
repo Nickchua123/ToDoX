@@ -16,7 +16,7 @@ export default function PrivacyPage() {
     {
       key: "emailMarketing",
       title: "Nhận email khuyến mãi",
-      desc: "Cho phép ND Style gửi thông tin ưu đãi tới hộp thư của bạn.",
+      desc: "Cho phép DL Shop gửi thông tin ưu đãi tới hộp thư của bạn.",
     },
     {
       key: "smsMarketing",

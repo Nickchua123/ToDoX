@@ -14,6 +14,10 @@ import {
   User,
   PhoneCall,
   Package,
+  CreditCard,
+  Wallet,
+  Smartphone,
+  ShieldCheck,
 } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "sonner";
@@ -93,6 +97,35 @@ export default function OrdersAdmin() {
   const formatCurrency = (value) => {
     if (typeof value !== "number") return "—";
     return value.toLocaleString("vi-VN") + "₫";
+  };
+
+  const paymentMeta = {
+    cod: { label: "Thanh toán khi nhận", Icon: Wallet },
+    vnpay: { label: "VNPay", Icon: CreditCard },
+    momo: { label: "MoMo", Icon: Smartphone },
+  };
+
+  const getPaymentMeta = (method) => {
+    const key = typeof method === "string" ? method.toLowerCase() : "cod";
+    return paymentMeta[key] || paymentMeta.cod;
+  };
+
+  const renderPaymentInfo = (order) => {
+    const meta = getPaymentMeta(order?.paymentMethod);
+    const Icon = meta.Icon;
+    const statusLabel = order?.isPaid ? "Đã thanh toán" : "Chưa thanh toán";
+    const statusColor = order?.isPaid ? "text-emerald-600" : "text-rose-600";
+    return (
+      <div className="flex items-center gap-3">
+        <span className="inline-flex items-center justify-center rounded-xl bg-slate-100 p-2">
+          <Icon className="w-5 h-5 text-slate-500" />
+        </span>
+        <div className="flex flex-col">
+          <span className="text-sm text-slate-700">{meta.label}</span>
+          <span className={`text-xs ${statusColor}`}>{statusLabel}</span>
+        </div>
+      </div>
+    );
   };
 
   const openDrawer = async (orderId) => {
@@ -183,6 +216,7 @@ export default function OrdersAdmin() {
                   <th className="px-6 py-3">Mã đơn</th>
                   <th className="px-6 py-3">Khách hàng</th>
                   <th className="px-6 py-3">Số sản phẩm</th>
+                  <th className="px-6 py-3">Thanh toán</th>
                   <th className="px-6 py-3">Tổng tiền</th>
                   <th className="px-6 py-3">Trạng thái</th>
                   <th className="px-6 py-3">Ngày tạo</th>
@@ -200,6 +234,7 @@ export default function OrdersAdmin() {
                       </div>
                     </td>
                     <td className="px-6 py-4">{o.items?.length || 0}</td>
+                    <td className="px-6 py-4">{renderPaymentInfo(o)}</td>
                     <td className="px-6 py-4">{formatCurrency(o.total)}</td>
                     <td className="px-6 py-4">
                       <StatusBadge value={o.status} />
@@ -320,6 +355,31 @@ export default function OrdersAdmin() {
                     <div className="mt-4 text-sm text-slate-600 space-y-1">
                       <p>Ngày tạo: {orderDetail.createdAt ? new Date(orderDetail.createdAt).toLocaleString("vi-VN") : "—"}</p>
                       {orderDetail.updatedAt && <p>Ngày cập nhật: {new Date(orderDetail.updatedAt).toLocaleString("vi-VN")}</p>}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 p-4">
+                    <h3 className="text-sm font-semibold text-slate-600 mb-3">Thanh toán</h3>
+                    <div className="space-y-2 text-sm text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-slate-400" />
+                        <span>{getPaymentMeta(orderDetail.paymentMethod).label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-slate-400" />
+                        <span className={orderDetail.isPaid ? "text-emerald-600" : "text-rose-600"}>
+                          {orderDetail.isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                        </span>
+                      </div>
+                      {orderDetail.paymentRef ? (
+                        <div className="text-xs text-slate-500">
+                          Mã giao dịch: <span className="font-mono text-slate-700">{orderDetail.paymentRef}</span>
+                        </div>
+                      ) : null}
+                      {orderDetail.paidAt ? (
+                        <div className="text-xs text-slate-500">
+                          Ngày thanh toán: {new Date(orderDetail.paidAt).toLocaleString("vi-VN")}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

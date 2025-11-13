@@ -4,7 +4,7 @@ import api from "@/lib/axios";
 import { toast } from "sonner";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 10;
 const GENDERS = ["Nam", "Nữ", "Khác"];
 const ROLE_OPTIONS = [
   { value: "admin", label: "Quản trị viên" },

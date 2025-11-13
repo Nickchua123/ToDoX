@@ -122,7 +122,7 @@ export default function Home() {
           <div className="rounded-2xl overflow-hidden shadow-card">
             <img
               src={hero}
-              alt="ND Style Hero"
+              alt="DL Shop Hero"
               className="w-full h-72 md:h-[380px] lg:h-[460px] object-cover"
             />
           </div>

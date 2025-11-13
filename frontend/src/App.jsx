@@ -17,6 +17,7 @@ import NewsPage2 from "./pages/NewsPage2";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderPage from "./pages/OrderPage";
+import PaymentResult from "./pages/PaymentResult";
 import AdminRoute from "./components/AdminRoute";
 import StoreRoute from "./components/StoreRoute";
 import AdminLayout from "./admin/AdminLayout.jsx";
@@ -28,6 +29,7 @@ import ReviewsAdmin from "./admin/pages/ReviewsAdmin.jsx";
 import BannersAdmin from "./admin/pages/BannersAdmin.jsx";
 import NewsAdmin from "./admin/pages/NewsAdmin.jsx";
 import DashboardAdmin from "./admin/pages/DashboardAdmin.jsx";
+import CouponsAdmin from "./admin/pages/CouponsAdmin.jsx";
 import AddressPage from "./pages/AddressPage";
 import PaymentPage from "./pages/PaymentPage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -71,6 +73,7 @@ export default function App() {
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/orders" element={<OrderPage />} />
+                <Route path="/payment-result" element={<PaymentResult />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot" element={<ForgotPassword />} />
@@ -97,6 +100,7 @@ export default function App() {
                   <Route path="categories" element={<CategoriesAdmin />} />
                   <Route path="orders" element={<OrdersAdmin />} />
                   <Route path="reviews" element={<ReviewsAdmin />} />
+                  <Route path="coupons" element={<CouponsAdmin />} />
                   <Route path="banners" element={<BannersAdmin />} />
                   <Route path="news" element={<NewsAdmin />} />
                 </Route>

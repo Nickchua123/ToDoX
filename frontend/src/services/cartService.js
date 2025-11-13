@@ -22,7 +22,7 @@ export async function fetchCart(config = {}) {
   return withCartTotals(data);
 }
 
-export async function addCartItem({ productId, variantId, quantity = 1 }) {
+export async function addCartItem({ productId, variantId, quantity = 1, options }) {
   const headers = await prepareCsrfHeaders();
   await api.post(
     "/cart/items",
@@ -30,6 +30,7 @@ export async function addCartItem({ productId, variantId, quantity = 1 }) {
       productId,
       variantId,
       quantity,
+      options,
     },
     { headers }
   );

@@ -142,11 +142,17 @@ export default function CartPage() {
                       <h2 className="font-medium text-lg">
                         {item.product?.name || "Sản phẩm"}
                       </h2>
-                      {item.variant?.label ? (
-                        <p className="text-sm text-gray-500">
-                          Phân loại: {item.variant.label}
-                        </p>
-                      ) : null}
+                      <div className="text-sm text-gray-500 space-y-1">
+                        {item.variant?.label ? (
+                          <p>Phân loại: {item.variant.label}</p>
+                        ) : null}
+                        {item.options?.color ? (
+                          <p>Màu sắc: {item.options.color}</p>
+                        ) : null}
+                        {item.options?.size ? (
+                          <p>Kích cỡ: {item.options.size}</p>
+                        ) : null}
+                      </div>
                       <div className="flex items-center mt-3 space-x-2">
                         <Button
                           variant="outline"

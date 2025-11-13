@@ -16,17 +16,68 @@ import { useCart } from "@/hooks/useCart";
 import api from "@/lib/axios";
 import { fetchProductReviews } from "@/services/reviewService";
 
-const QtyInput = ({ value, onChange }) => (
-  <div className="inline-flex items-center gap-3 rounded-xl border px-3 py-2">
-    <button onClick={() => onChange(Math.max(1, value - 1))} className="text-sm" type="button">
-      -
-    </button>
-    <span className="min-w-6 text-center text-sm">{value}</span>
-    <button onClick={() => onChange(value + 1)} className="text-sm" type="button">
-      +
-    </button>
-  </div>
-);
+const QtyInput = ({ value, onChange, max }) => {
+  const canDecrease = value > 1;
+  const canIncrease = typeof max === "number" ? value < max : true;
+  const handleDecrease = () => {
+    if (!canDecrease) return;
+    onChange(Math.max(1, value - 1));
+  };
+  const handleIncrease = () => {
+    if (!canIncrease) return;
+    const limit = typeof max === "number" ? max : value + 1;
+    onChange(Math.min(limit, value + 1));
+  };
+  return (
+    <div className="inline-flex items-center gap-3 rounded-xl border px-3 py-2">
+      <button
+        onClick={handleDecrease}
+        className="text-sm disabled:opacity-40"
+        type="button"
+        disabled={!canDecrease}
+      >
+        -
+      </button>
+      <span className="min-w-6 text-center text-sm">{value}</span>
+      <button
+        onClick={handleIncrease}
+        className="text-sm disabled:opacity-40"
+        type="button"
+        disabled={!canIncrease}
+      >
+        +
+      </button>
+    </div>
+  );
+};
+
+const OptionSelector = ({ label, options = [], selected, onSelect }) => {
+  if (!options.length) return null;
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-semibold text-slate-700">{label}</div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const active = selected === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onSelect(option)}
+              className={`px-3 py-1.5 rounded-full border text-sm transition ${
+                active
+                  ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
+                  : "border-slate-200 hover:border-brand-primary hover:text-brand-primary"
+              }`}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 export default function ProductDetail() {
   const { id: routeId } = useParams();
@@ -40,6 +91,39 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("info");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const colors = Array.isArray(product?.colors) ? product.colors.filter(Boolean) : [];
+  const sizes = Array.isArray(product?.sizes) ? product.sizes.filter(Boolean) : [];
+  const stock = typeof product?.stock === "number" ? product.stock : null;
+  const maxQty = typeof stock === "number" && stock > 0 ? stock : null;
+  const isOutOfStock = typeof stock === "number" && stock <= 0;
+
+  useEffect(() => {
+    if (typeof maxQty === "number" && maxQty > 0 && qty > maxQty) {
+      setQty(maxQty);
+    }
+    if (typeof maxQty === "number" && maxQty <= 0) {
+      setQty(1);
+    }
+  }, [maxQty]);
+  useEffect(() => {
+    if (colors.length) {
+      setSelectedColor((prev) => (colors.includes(prev) ? prev : colors[0]));
+    } else {
+      setSelectedColor("");
+    }
+  }, [colors.join("|")]);
+
+  useEffect(() => {
+    if (sizes.length) {
+      setSelectedSize((prev) => (sizes.includes(prev) ? prev : sizes[0]));
+    } else {
+      setSelectedSize("");
+    }
+  }, [sizes.join("|")]);
+
+  const [reviewProductId, setReviewProductId] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewMeta, setReviewMeta] = useState({ total: 0, page: 1 });
   const [reviewSummary, setReviewSummary] = useState({ average: 0, total: 0 });
@@ -51,6 +135,7 @@ export default function ProductDetail() {
         setLoading(true);
         const { data } = await api.get(`/products/${id}`);
         setProduct(data);
+        setReviewProductId(data?._id || null);
         setError("");
       } catch (err) {
         console.error(err);
@@ -89,10 +174,10 @@ export default function ProductDetail() {
 
   const loadReviews = useCallback(
     async (page = 1, append = false) => {
-      if (!id) return;
+      if (!reviewProductId) return;
       try {
         setReviewLoading(true);
-        const data = await fetchProductReviews(id, page, 5, {
+        const data = await fetchProductReviews(reviewProductId, page, 5, {
           includeStats: !append && page === 1,
         });
         setReviews((prev) => (append ? [...prev, ...data.items] : data.items));
@@ -119,7 +204,7 @@ export default function ProductDetail() {
         setReviewLoading(false);
       }
     },
-    [id]
+    [reviewProductId]
   );
 
   useEffect(() => {
@@ -127,7 +212,7 @@ export default function ProductDetail() {
     setReviewMeta({ total: 0, page: 1 });
     setReviewSummary({ average: 0, total: 0 });
     loadReviews(1, false);
-  }, [id, loadReviews]);
+  }, [reviewProductId, loadReviews]);
 
   if (loading) {
     return (
@@ -162,9 +247,28 @@ export default function ProductDetail() {
   const prev = () => setActive((a) => (gallery.length ? (a - 1 + gallery.length) % gallery.length : 0));
 
   const handleAddToCart = async (redirect) => {
+    if (colors.length && !selectedColor) {
+      toast.error("Vui lòng chọn màu sắc");
+      return;
+    }
+    if (sizes.length && !selectedSize) {
+      toast.error("Vui lòng chọn kích cỡ");
+      return;
+    }
+    if (isOutOfStock) {
+      toast.error("Sản phẩm đã hết hàng");
+      return;
+    }
     try {
       setAdding(true);
-      await addCartItem({ productId: product._id, quantity: qty });
+      await addCartItem({
+        productId: product._id,
+        quantity: qty,
+        options: {
+          ...(selectedColor ? { color: selectedColor } : {}),
+          ...(selectedSize ? { size: selectedSize } : {}),
+        },
+      });
       await refreshCart();
       toast.success("Đã thêm vào giỏ hàng");
       if (redirect) navigate("/checkout");
@@ -243,24 +347,37 @@ export default function ProductDetail() {
 
               <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
 
-              <div className="flex items-center gap-3">
-                <QtyInput value={qty} onChange={setQty} />
-                <button
-                  className="rounded-full bg-brand-primary px-5 py-2 text-white hover:bg-[#e5553d] transition"
-                  type="button"
-                  onClick={() => handleAddToCart(false)}
-                  disabled={adding}
-                >
-                  Thêm vào giỏ
-                </button>
-                <button
-                  className="rounded-full border border-brand-primary px-5 py-2 text-brand-primary hover:bg-brand-primary hover:text-white transition"
-                  type="button"
-                  onClick={() => handleAddToCart(true)}
-                  disabled={adding}
-                >
-                  {adding ? "Đang xử lý..." : "Mua ngay"}
-                </button>
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <OptionSelector label="Màu sắc" options={colors} selected={selectedColor} onSelect={setSelectedColor} />
+                  <OptionSelector label="Kích cỡ" options={sizes} selected={selectedSize} onSelect={setSelectedSize} />
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="space-y-1">
+                    <QtyInput value={qty} onChange={setQty} max={maxQty ?? undefined} />
+                    {typeof stock === "number" && (
+                      <p className="text-xs text-slate-500">
+                        {isOutOfStock ? "Hết hàng" : `Còn ${stock} sản phẩm`}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    className="rounded-full bg-brand-primary px-5 py-2 text-white hover:bg-[#e5553d] transition"
+                    type="button"
+                    onClick={() => handleAddToCart(false)}
+                    disabled={adding || isOutOfStock}
+                  >
+                    Thêm vào giỏ
+                  </button>
+                  <button
+                    className="rounded-full border border-brand-primary px-5 py-2 text-brand-primary hover:bg-brand-primary hover:text-white transition"
+                    type="button"
+                    onClick={() => handleAddToCart(true)}
+                    disabled={adding || isOutOfStock}
+                  >
+                    {adding ? "Đang xử lý..." : "Mua ngay"}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3 rounded-2xl border bg-[#fffaf6] p-4">
