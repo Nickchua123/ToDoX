@@ -6,6 +6,26 @@ import { isAdminUser } from "../middleware/admin.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+const recalcProductRating = async (productId) => {
+  if (!isValidObjectId(productId)) return;
+  try {
+    const stats = await Review.aggregate([
+      {
+        $match: {
+          product: new mongoose.Types.ObjectId(productId),
+          approved: true,
+          hidden: false,
+        },
+      },
+      { $group: { _id: null, average: { $avg: "$rating" } } },
+    ]);
+    const average = stats?.[0]?.average || 0;
+    await Product.findByIdAndUpdate(productId, { rating: average });
+  } catch (err) {
+    console.error("[reviews] recalc rating error", err);
+  }
+};
+
 export const listReviews = async (req, res) => {
   try {
     const { product, page = 1, limit = 10, includeStats } = req.query;
@@ -67,6 +87,8 @@ export const createReview = async (req, res) => {
     }
     const exists = await Product.exists({ _id: product });
     if (!exists) return res.status(400).json({ message: "Sản phẩm không tồn tại" });
+    const hasReviewed = await Review.exists({ product, user: req.userId });
+    if (hasReviewed) return res.status(409).json({ message: "Bạn đã đánh giá sản phẩm này" });
     const purchased = await Order.exists({
       user: req.userId,
       "items.product": product,
@@ -107,6 +129,7 @@ export const updateReview = async (req, res) => {
     review.approvedBy = null;
     review.hidden = false;
     await review.save();
+    await recalcProductRating(review.product);
     res.json(review);
   } catch (err) {
     res.status(500).json({ message: "Không cập nhật được đánh giá", error: err.message });
@@ -123,6 +146,7 @@ export const deleteReview = async (req, res) => {
     }
     const removed = await Review.findOneAndDelete(query);
     if (!removed) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    await recalcProductRating(removed.product);
     res.json({ message: "Đã xóa đánh giá" });
   } catch (err) {
     res.status(500).json({ message: "Không xóa được đánh giá", error: err.message });
@@ -168,6 +192,7 @@ export const approveReview = async (req, res) => {
       { new: true }
     );
     if (!review) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    await recalcProductRating(review.product);
     res.json({ message: "Đã duyệt đánh giá", review });
   } catch (err) {
     res.status(500).json({ message: "Không duyệt được đánh giá", error: err.message });
@@ -184,6 +209,7 @@ export const hideReview = async (req, res) => {
       { new: true }
     );
     if (!review) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    await recalcProductRating(review.product);
     res.json({
       message: hidden ? "Đã ẩn đánh giá" : "Đã hiện đánh giá",
       review,

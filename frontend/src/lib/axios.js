@@ -30,7 +30,6 @@ api.interceptors.response.use(
     // 401 -> try refresh flow once, then redirect to login on failure
     if (
       status === 401 &&
-      !skipAuthRedirect &&
       !cfg._retryRefresh &&
       !cfg.url?.includes("/auth/refresh") &&
       !cfg.url?.includes("/auth/login")

@@ -166,6 +166,20 @@ export const requestDeleteAccount = async (req, res) => {
   }
 };
 
+export const cancelDeleteAccount = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { deleteRequestedAt: null },
+      { new: true }
+    ).select("deleteRequestedAt");
+    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    res.json({ message: "Đã hủy yêu cầu xóa tài khoản", deleteRequestedAt: user.deleteRequestedAt });
+  } catch (err) {
+    res.status(500).json({ message: "Không hủy được yêu cầu xóa", error: err.message });
+  }
+};
+
 export const createUser = async (req, res) => {
   try {
     const { name, email, password, username, phone, gender, role } = req.body || {};

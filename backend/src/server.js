@@ -1,4 +1,4 @@
-﻿import dotenv from "dotenv";
+﻿import "./loadEnv.js";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,7 +14,6 @@ import dns from "dns";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 try {
   if (typeof dns.setDefaultResultOrder === "function") {
@@ -42,6 +41,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import shippingRoutes from "./routes/shippingRoutes.js";
 import { connectDB } from "./config/db.js";
 import { seedAdminUser } from "./utils/seedAdminUser.js";
+import { startAccountDeletionJob } from "./utils/accountDeletionJob.js";
 
 const app = express();
 
@@ -227,6 +227,7 @@ app.use((err, req, res, next) => {
 connectDB()
   .then(async () => {
     await seedAdminUser();
+    startAccountDeletionJob();
     app.listen(PORT, () => {
       console.log(`✅ Server đang chạy tại cổng ${PORT}`);
     });

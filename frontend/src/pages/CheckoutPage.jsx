@@ -11,6 +11,7 @@ import api from "@/lib/axios";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 import { toast } from "sonner";
 import { getGhnFee, getGhnServices } from "@/services/shippingService";
+import { validateCoupon } from "@/services/couponService";
 
 const currency = (v) =>
   Number(v || 0).toLocaleString("vi-VN", {
@@ -46,6 +47,8 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedPayment, setSelectedPayment] = useState("cod");
   const [coupon, setCoupon] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [shippingFee, setShippingFee] = useState(0);
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
@@ -99,11 +102,10 @@ export default function CheckoutPage() {
   );
 
   const discount = useMemo(() => {
-    if (!items.length) return 0;
-    return coupon.trim().toLowerCase() === "sale20"
-      ? Math.round(subtotal * 0.2)
-      : 0;
-  }, [coupon, subtotal, items.length]);
+    if (!items.length || !appliedCoupon) return 0;
+    const pct = Number(appliedCoupon.discountPercent) || 0;
+    return Math.round((subtotal * pct) / 100);
+  }, [appliedCoupon, subtotal, items.length]);
 
   const total = useMemo(
     () => subtotal - discount + shippingFee,
@@ -113,6 +115,30 @@ export default function CheckoutPage() {
     () => addresses.find((addr) => addr._id === selectedAddress),
     [addresses, selectedAddress]
   );
+  const getServiceLabel = (service) => {
+    const map = {
+      2: "Nhanh",
+      3: "Tiết kiệm",
+      4: "Chuẩn",
+      5: "Tiết kiệm",
+      6: "Đồng giá",
+      7: "Quốc tế",
+    };
+    return (
+      map?.[Number(service?.service_type_id)] ||
+      service?.short_name ||
+      service?.service_name ||
+      "Dịch vụ GHN"
+    );
+  };
+  const getExpectedLabel = (service, checked) => {
+    const source =
+      (checked && selectedService?.expected_delivery_time) ||
+      service?.expected_delivery_time ||
+      service?.leadtime;
+    const label = formatLeadTime(source);
+    return label || "Liên hệ";
+  };
 
   const handlePlaceOrder = async () => {
     if (!items.length) {
@@ -166,6 +192,7 @@ export default function CheckoutPage() {
           notes,
           shippingFee,
           discount,
+          ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
           paymentMethod: selectedPayment,
           ...(shippingPayload ? { shipping: shippingPayload } : {}),
         },
@@ -195,6 +222,39 @@ export default function CheckoutPage() {
       if (!redirected) {
         setPlacingOrder(false);
       }
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    const trimmed = coupon.trim();
+    if (!trimmed) {
+      toast.error("Vui lòng nhập mã giảm giá");
+      return;
+    }
+    if (!items.length) {
+      toast.error("Giỏ hàng trống");
+      return;
+    }
+    setApplyingCoupon(true);
+    try {
+      const headers = await prepareCsrfHeaders();
+      const data = await validateCoupon(trimmed, { headers });
+      if (!data?.code || data.discountPercent == null) {
+        throw new Error("Không nhận được dữ liệu mã giảm giá");
+      }
+      const normalizedCode = String(data.code).trim().toUpperCase();
+      setCoupon(normalizedCode);
+      setAppliedCoupon({
+        code: normalizedCode,
+        discountPercent: Number(data.discountPercent) || 0,
+      });
+      toast.success(`Đã áp dụng mã ${normalizedCode} (-${data.discountPercent}%)`);
+    } catch (err) {
+      const msg = err?.response?.data?.message || err.message || "Mã giảm giá không hợp lệ";
+      toast.error(msg);
+      setAppliedCoupon(null);
+    } finally {
+      setApplyingCoupon(false);
     }
   };
 
@@ -236,7 +296,9 @@ export default function CheckoutPage() {
       setShippingLoading(true);
       setShippingError("");
       try {
-        const services = await getGhnServices({ toDistrictId: address.districtId });
+        const services = await getGhnServices({
+          toDistrictId: address.districtId,
+        });
         if (!Array.isArray(services) || services.length === 0) {
           setShippingOptions([]);
           setSelectedService(null);
@@ -244,40 +306,94 @@ export default function CheckoutPage() {
           setShippingError("Không có dịch vụ GHN phù hợp tại khu vực này.");
           return;
         }
-        setShippingOptions(services);
-        const chosen =
-          services.find(
-            (service) =>
-              preferredServiceId &&
-              String(service.service_id) === String(preferredServiceId)
-          ) || services[0];
-        const feeRes = await getGhnFee({
-          service_type_id: chosen.service_type_id,
-          service_id: chosen.service_id,
-          to_district_id: address.districtId,
-          to_ward_code: address.wardCode,
-          weight: pkg.weight,
-          length: pkg.length,
-          width: pkg.width,
-          height: pkg.height,
-        });
-        const feeValue = Number(
-          feeRes?.total ??
-            feeRes?.total_fee ??
-            feeRes?.service_fee ??
-            feeRes?.data?.total ??
-            0
+
+        // Tính phí cho từng gói để hiển thị đầy đủ
+        const feeResults = await Promise.all(
+          services.map(async (service) => {
+            try {
+              const feeRes = await getGhnFee({
+                service_type_id: service.service_type_id,
+                service_id: service.service_id,
+                to_district_id: address.districtId,
+                to_ward_code: address.wardCode,
+                weight: pkg.weight,
+                length: pkg.length,
+                width: pkg.width,
+                height: pkg.height,
+              });
+              const feeValue = Number(
+                feeRes?.total ??
+                  feeRes?.total_fee ??
+                  feeRes?.service_fee ??
+                  feeRes?.data?.total ??
+                  0
+              );
+              const expectedTime = normalizeTimestamp(
+                feeRes?.expected_delivery_time ||
+                  feeRes?.leadtime ||
+                  service.leadtime
+              );
+              return {
+                serviceId: service.service_id,
+                fee: feeValue,
+                expectedTime,
+              };
+            } catch (err) {
+              return {
+                serviceId: service.service_id,
+                error:
+                  err?.response?.data?.message ||
+                  err?.message ||
+                  "Không tính được phí",
+              };
+            }
+          })
         );
-        setShippingFee(feeValue);
-        const expectedTime = normalizeTimestamp(
-          feeRes?.expected_delivery_time || feeRes?.leadtime || chosen.leadtime
-        );
-        setSelectedService({
-          ...chosen,
-          fee: feeValue,
-          expected_delivery_time: expectedTime,
+
+        const enriched = services.map((service) => {
+          const feeInfo = feeResults.find(
+            (f) => String(f.serviceId) === String(service.service_id)
+          );
+          return {
+            ...service,
+            _fee: feeInfo?.fee,
+            _feeError: feeInfo?.error,
+            expected_delivery_time: feeInfo?.expectedTime || service.leadtime,
+          };
         });
-        setShippingError("");
+
+        setShippingOptions(enriched);
+
+        // Chọn gói ưu tiên có phí, nếu không lấy gói đầu tiên
+        const preferred = enriched.find(
+          (service) =>
+            preferredServiceId &&
+            String(service.service_id) === String(preferredServiceId) &&
+            typeof service._fee === "number"
+        );
+        const fallback = enriched.find(
+          (service) => typeof service._fee === "number"
+        );
+        const chosen = preferred || fallback || enriched[0];
+
+        if (chosen && typeof chosen._fee === "number") {
+          setShippingFee(chosen._fee);
+          const expectedTime = normalizeTimestamp(
+            chosen.expected_delivery_time
+          );
+          setSelectedService({
+            ...chosen,
+            fee: chosen._fee,
+            expected_delivery_time: expectedTime,
+          });
+          setShippingError("");
+        } else {
+          setSelectedService(chosen || null);
+          setShippingFee(0);
+          setShippingError(
+            "Không tính được phí cho các gói GHN. Vui lòng thử lại."
+          );
+        }
       } catch (err) {
         console.error(err);
         setShippingOptions([]);
@@ -359,7 +475,7 @@ export default function CheckoutPage() {
                     {addresses.map((addr) => (
                       <label
                         key={addr._id}
-                        className="flex items-start gap-3 border rounded-lg p-4 cursor-pointer hover:border-sky-400 transition"
+                        className="flex items-start gap-3 border rounded-lg p-4 cursor-pointer hover:border-sky-400 transition relative"
                       >
                         <input
                           type="radio"
@@ -385,6 +501,17 @@ export default function CheckoutPage() {
                             </span>
                           ) : null}
                         </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/account/address?edit=${addr._id}`);
+                          }}
+                          className="absolute top-3 right-3 text-xs text-sky-600 hover:text-sky-700 underline-offset-2 hover:underline"
+                        >
+                          Sửa
+                        </button>
                       </label>
                     ))}
                   </div>
@@ -432,26 +559,17 @@ export default function CheckoutPage() {
                                 }
                               />
                               <div className="flex-1">
-                              <div className="font-medium">
-                                {option.short_name || option.service_name}
+                          <div className="font-medium">
+                                {getServiceLabel(option)}
                               </div>
                               <div className="text-xs text-gray-500">
                                 Dự kiến:{" "}
-                                {(() => {
-                                  const label =
-                                    checked && selectedService?.expected_delivery_time
-                                      ? formatLeadTime(
-                                          selectedService.expected_delivery_time
-                                        )
-                                      : formatLeadTime(option.leadtime);
-                                  return label || "Liên hệ";
-                                })()}
+                                {getExpectedLabel(option, checked)}
                               </div>
                             </div>
                               <div className="font-semibold text-sm min-w-[90px] text-right">
-                                {selectedService?.service_id ===
-                                option.service_id
-                                  ? currency(shippingFee)
+                                {typeof option._fee === "number"
+                                  ? currency(option._fee)
                                   : "~"}
                               </div>
                             </label>
@@ -569,7 +687,10 @@ export default function CheckoutPage() {
                 </div>
 
                 <form
-                  onSubmit={(e) => e.preventDefault()}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleApplyCoupon();
+                  }}
                   className="mt-4 flex gap-3"
                 >
                   <input
@@ -581,11 +702,16 @@ export default function CheckoutPage() {
                   />
                   <button
                     className="px-4 py-2 rounded-md bg-sky-600 text-white hover:brightness-90 disabled:opacity-50"
-                    disabled={!items.length}
+                    disabled={!items.length || applyingCoupon}
                   >
-                    Áp dụng
+                    {applyingCoupon ? "Đang áp dụng..." : "Áp dụng"}
                   </button>
                 </form>
+                {appliedCoupon ? (
+                  <div className="text-xs text-green-700 mt-1">
+                    Đã áp dụng {appliedCoupon.code} (-{appliedCoupon.discountPercent}%)
+                  </div>
+                ) : null}
 
                 <div className="mt-5 text-sm space-y-2">
                   <div className="flex justify-between">

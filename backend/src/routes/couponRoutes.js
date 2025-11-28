@@ -3,6 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/admin.js";
 import {
   listCoupons,
+  listAvailableCoupons,
   createCoupon,
   updateCoupon,
   deleteCoupon,
@@ -12,6 +13,8 @@ import {
 const router = express.Router();
 
 router.post("/validate", validateCoupon);
+
+router.get("/available", requireAuth, listAvailableCoupons);
 
 router.use(requireAuth, requireAdmin);
 
