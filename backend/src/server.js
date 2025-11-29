@@ -161,6 +161,13 @@ const csrfProtection = csurf({
   },
 });
 
+// Các đường dẫn bỏ qua CSRF (giảm ma sát đăng nhập; vẫn yêu cầu cookie)
+const CSRF_EXEMPT_PATHS = new Set([
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/auth/refresh",
+]);
+
 // CSRF
 app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
   const token = req.csrfToken();
@@ -175,6 +182,7 @@ app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
 // Apply CSRF 
 app.use("/api", (req, res, next) => {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+  if (CSRF_EXEMPT_PATHS.has(req.path)) return next();
   return csrfProtection(req, res, next);
 });
 
