@@ -118,8 +118,9 @@ app.use(
         const base = {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://challenges.cloudflare.com"],
           imgSrc: ["'self'", "data:"],
+          fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
           connectSrc: connectSources,
           frameSrc: ["'self'", "https://challenges.cloudflare.com"],
         };

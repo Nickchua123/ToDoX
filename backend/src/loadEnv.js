@@ -6,5 +6,4 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-// Debug: confirm env secrets are loaded (do not log full tokens in production)
 console.log("[BOOT] GHN_TOKEN loaded:", Boolean(process.env.GHN_TOKEN));
