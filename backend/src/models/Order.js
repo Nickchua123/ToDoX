@@ -26,6 +26,9 @@ const orderSchema = new mongoose.Schema(
     subtotal: { type: Number, default: 0 },        // Tổng chưa tính phí ship
     shippingFee: { type: Number, default: 0 },     // Phí vận chuyển
     discount: { type: Number, default: 0 },        // Mã giảm giá nếu có
+    couponCode: { type: String, default: null },
+    couponPercent: { type: Number, default: 0 },
+    couponDiscount: { type: Number, default: 0 },
 
     status: {
       type: String,

@@ -5,6 +5,7 @@ import { prepareCsrfHeaders } from "@/lib/csrf";
 import { getProvinces, getDistricts, getWards } from "@/services/shippingService";
 
 const emptyForm = {
+  _id: "",
   label: "",
   line1: "",
   line2: "",
@@ -150,8 +151,13 @@ export default function AddressPage() {
     setSaving(true);
     try {
       const headers = await prepareCsrfHeaders();
-      await api.post("/addresses", formData, { headers });
-      toast.success("Đã thêm địa chỉ");
+      if (formData._id) {
+        await api.put(`/addresses/${formData._id}`, formData, { headers });
+        toast.success("Đã cập nhật địa chỉ");
+      } else {
+        await api.post("/addresses", formData, { headers });
+        toast.success("Đã thêm địa chỉ");
+      }
       setFormData(emptyForm);
       setShowForm(false);
       await loadAddresses();
@@ -185,6 +191,57 @@ export default function AddressPage() {
     }
   };
 
+  const startEdit = (addr) => {
+    if (!addr) return;
+    setFormData({
+      _id: addr._id,
+      label: addr.label || "",
+      line1: addr.line1 || "",
+      line2: addr.line2 || "",
+      city: addr.city || "",
+      district: addr.district || "",
+      ward: addr.ward || "",
+      phone: addr.phone || "",
+      isDefault: Boolean(addr.isDefault),
+      provinceId: addr.provinceId || "",
+      districtId: addr.districtId || "",
+      wardCode: addr.wardCode || "",
+      provinceName: addr.provinceName || addr.city || "",
+      districtName: addr.districtName || addr.district || "",
+      wardName: addr.wardName || addr.ward || "",
+    });
+    setShowForm(true);
+    ensureProvinces();
+  };
+
+  useEffect(() => {
+    if (!showForm || !formData.provinceId) return;
+    let active = true;
+    const preload = async () => {
+      try {
+        setLoadingLocations(true);
+        await ensureProvinces();
+        const dist = await getDistricts(formData.provinceId);
+        if (!active) return;
+        setDistricts(dist);
+        if (formData.districtId) {
+          const wardsRes = await getWards(formData.districtId);
+          if (!active) return;
+          setWards(wardsRes);
+        }
+      } catch (err) {
+        console.error("Không tải được danh mục địa lý khi sửa địa chỉ", err);
+      } finally {
+        if (active) setLoadingLocations(false);
+      }
+    };
+    preload();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm, formData.provinceId, formData.districtId]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -196,7 +253,11 @@ export default function AddressPage() {
         </div>
         <button
           className="bg-brand-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-[#e5553d] transition"
-          onClick={() => setShowForm((prev) => !prev)}
+          onClick={() => {
+            setFormData(emptyForm);
+            setShowForm((prev) => !prev);
+            ensureProvinces();
+          }}
         >
           {showForm ? "Đóng" : "+ Thêm địa chỉ"}
         </button>
@@ -206,7 +267,9 @@ export default function AddressPage() {
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm">
           <div className="border-b px-5 py-4 flex items-center justify-between">
             <div>
-              <p className="font-semibold text-lg">Thêm địa chỉ mới</p>
+              <p className="font-semibold text-lg">
+                {formData._id ? "Sửa địa chỉ" : "Thêm địa chỉ mới"}
+              </p>
               <p className="text-xs text-gray-500">Nhập chính xác để giao hàng nhanh chóng</p>
             </div>
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${formData.isDefault ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
@@ -337,23 +400,31 @@ export default function AddressPage() {
               className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
             >
               <div>
-                <div className="font-medium text-lg">
+                <div className="font-medium text-lg flex items-center gap-2 flex-wrap">
                   {addr.label || "Địa chỉ"}{" "}
                   <span className="text-gray-500 text-sm">
                     {addr.phone}
                   </span>
+                  {addr.isDefault && (
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full border border-brand-primary text-brand-primary">
+                      Mặc định
+                    </span>
+                  )}
                 </div>
                 <div className="text-gray-600 mt-1">
                   {addr.line1}
-                  {addr.line2 ? `, ${addr.line2}` : ""}, {addr.ward}, {addr.district}, {addr.city}
+                  {addr.line2 ? `, ${addr.line2}` : ""},{" "}
+                  {addr.wardName || addr.ward}, {addr.districtName || addr.district}, {addr.city || addr.provinceName}
                 </div>
-                {addr.isDefault && (
-                  <span className="inline-block mt-2 px-2 py-0.5 text-xs rounded-full border border-brand-primary text-brand-primary">
-                    Mặc định
-                  </span>
-                )}
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-xl border text-sm"
+                  onClick={() => startEdit(addr)}
+                >
+                  Sửa
+                </button>
                 {!addr.isDefault && (
                   <button
                     className="px-3 py-1.5 rounded-xl border text-sm"

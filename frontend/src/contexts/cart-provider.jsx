@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { fetchCart } from "@/services/cartService";
 import { toast } from "sonner";
 import { CartContext } from "./cart-context";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CartProvider({ children }) {
   const [cartData, setCartData] = useState({ cart: null, subtotal: 0 });
+  const { user } = useAuth();
 
   const loadCart = async () => {
     try {
@@ -21,7 +23,7 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     loadCart();
-  }, []);
+  }, [user?._id]);
 
   const totalItems = useMemo(() => {
     const items = cartData.cart?.items || [];

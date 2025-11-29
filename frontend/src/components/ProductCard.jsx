@@ -2,6 +2,7 @@
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useEffect, useState } from "react";
 
 export default function ProductCard({
   id,
@@ -16,6 +17,8 @@ export default function ProductCard({
   onToggleFavorite,
 }) {
   const { isFavorite: markFavorite, toggleFavorite } = useFavorites();
+  const [toggling, setToggling] = useState(false);
+  const [optimisticFavorite, setOptimisticFavorite] = useState(false);
   // Ưu tiên slug/id được truyền xuống; fallback giữ logic cũ dựa trên đường dẫn ảnh
   const linkId = (() => {
     if (slug) return String(slug);
@@ -30,27 +33,47 @@ export default function ProductCard({
   })();
 
   const ImgEl = (
-    <img
-      src={img}
-      alt={name}
-      className={`w-full ${compact ? "h-56" : "h-72"} object-cover`}
-    />
+    <div className={`relative w-full ${compact ? "h-52" : "h-64"}`}>
+      <img
+        src={img}
+        alt={name}
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+    </div>
   );
 
-  const entityId = slug || id;
+  // Dùng id thực (ObjectId) cho thao tác yêu thích; slug chỉ dùng cho URL
+  const entityId = id || slug;
   const normalizedEntityId = entityId ? String(entityId) : "";
   const resolvedIsFavorite =
     typeof isFavorite === "boolean"
       ? isFavorite
       : Boolean(normalizedEntityId && markFavorite?.(normalizedEntityId));
+  useEffect(() => {
+    setOptimisticFavorite(resolvedIsFavorite);
+  }, [resolvedIsFavorite]);
   const defaultToggle =
     !onToggleFavorite && toggleFavorite && normalizedEntityId
       ? () => toggleFavorite(normalizedEntityId)
       : undefined;
   const favoriteHandler = onToggleFavorite || defaultToggle;
 
+  const handleFavoriteClick = async () => {
+    if (!favoriteHandler || toggling) return;
+    setToggling(true);
+    setOptimisticFavorite(!resolvedIsFavorite);
+    try {
+      await Promise.resolve(favoriteHandler());
+    } catch (err) {
+      // Revert if failed
+      setOptimisticFavorite(resolvedIsFavorite);
+    } finally {
+      setToggling(false);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden hover:-translate-y-0.5 transition">
+    <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden hover:-translate-y-0.5 transition h-full flex flex-col">
       <div className="relative">
         {linkId ? <Link to={`/p/${linkId}`}>{ImgEl}</Link> : ImgEl}
 
@@ -63,22 +86,27 @@ export default function ProductCard({
         {favoriteHandler ? (
           <button
             type="button"
-            onClick={favoriteHandler}
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white shadow transition"
+            onClick={handleFavoriteClick}
+            disabled={toggling}
+            className={`absolute top-3 right-3 p-2 rounded-full bg-white/90 shadow transition ${
+              toggling ? "opacity-60 cursor-wait" : "hover:bg-white"
+            }`}
             aria-label={resolvedIsFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
           >
             <Heart
-              className="w-4 h-4"
-              stroke={resolvedIsFavorite ? "#f97316" : "currentColor"}
-              fill={resolvedIsFavorite ? "#f97316" : "none"}
+              className={`w-4 h-4 transition-transform ${
+                optimisticFavorite ? "scale-110" : ""
+              }`}
+              stroke={optimisticFavorite ? "#f97316" : "currentColor"}
+              fill={optimisticFavorite ? "#f97316" : "none"}
             />
           </button>
         ) : null}
       </div>
 
-      <div className="p-4">
+      <div className="p-4 flex flex-col gap-2">
         <div
-          className={`${compact ? "text-[13px]" : "text-sm"} text-gray-700 leading-snug min-h-[44px] overflow-hidden`}
+          className={`${compact ? "text-[13px]" : "text-sm"} text-gray-700 leading-snug min-h-[36px] overflow-hidden`}
           style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}
         >
           {name}

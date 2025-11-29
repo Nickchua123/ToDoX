@@ -8,6 +8,7 @@ import {
   getUserById,
   updateUser,
   requestDeleteAccount,
+  cancelDeleteAccount,
   createUser,
   deleteUser,
 } from "../controllers/userController.js";
@@ -19,6 +20,7 @@ router.use(requireAuth);
 router.get("/me", getMe);
 router.patch("/me", updateMe);
 router.post("/delete-request", requestDeleteAccount);
+router.post("/delete-cancel", cancelDeleteAccount);
 
 router.route("/")
   .get(requireAdmin, listUsers)

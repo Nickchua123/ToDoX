@@ -227,6 +227,36 @@ export const logout = (req, res) => {
   res.clearCookie("XSRF-TOKEN", XSRF_COOKIE_OPTIONS);
   res.status(200).json({ message: "Đăng xuất thành công" });
 };
+// Đổi mật khẩu (yêu cầu đăng nhập)
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
+    }
+    if (!isStrongPassword(newPassword)) {
+      return res.status(400).json({
+        message: "Mật khẩu mới yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+      });
+    }
+    const user = await User.findById(req.userId).select("+password +tokenVersion");
+    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const valid = await bcrypt.compare(String(currentPassword), user.password);
+    if (!valid) return res.status(401).json({ message: "Mật khẩu hiện tại không đúng" });
+
+    user.password = await bcrypt.hash(String(newPassword), 10);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1; // Thu hồi refresh cũ
+    await user.save();
+
+    try { res.clearCookie(ACCESS_COOKIE, COOKIE_OPTIONS); } catch {}
+    try { res.clearCookie(REFRESH_COOKIE, COOKIE_OPTIONS); } catch {}
+    res.clearCookie("XSRF-TOKEN", XSRF_COOKIE_OPTIONS);
+
+    return res.status(200).json({ message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại." });
+  } catch (err) {
+    return res.status(500).json({ message: "Không đổi được mật khẩu" });
+  }
+};
 // Quên/đặt lại mật khẩu
 export const forgotPassword = async (req, res) => {
   try {

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Address from "../models/Address.js";
+import Coupon from "../models/Coupon.js";
 import { isAdminUser } from "../middleware/admin.js";
 import { createNotification, NotificationType } from "../utils/notification.js";
 import { ghnCancelOrder, ghnCreateOrder } from "../services/ghnService.js";
@@ -184,6 +185,7 @@ export const createOrder = async (req, res) => {
       discount = 0,
       paymentMethod = "cod",
       shipping = {},
+      couponCode,
     } = req.body || {};
     if (!addressId) {
       return res.status(400).json({ message: "Thiếu địa chỉ nhận hàng" });
@@ -197,7 +199,28 @@ export const createOrder = async (req, res) => {
     const { orderItems } = await enrichItems(items);
     const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const finalShipping = Number(shippingFee) || 0;
-    const finalDiscount = Number(discount) || 0;
+    let finalDiscount = Number(discount) || 0;
+    let couponPercent = 0;
+    let appliedCouponCode = null;
+
+    if (couponCode) {
+      const normalizedCode = String(couponCode).trim().toUpperCase();
+      const coupon = await Coupon.findOne({ code: normalizedCode });
+      if (!coupon) return res.status(400).json({ message: "Mã giảm giá không tồn tại" });
+      if (!coupon.active) return res.status(400).json({ message: "Mã giảm giá đã bị vô hiệu" });
+      if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+        return res.status(400).json({ message: "Mã giảm giá đã hết hạn" });
+      }
+      if (coupon.maxUses && coupon.used >= coupon.maxUses) {
+        return res.status(400).json({ message: "Mã giảm giá đã hết lượt dùng" });
+      }
+      couponPercent = Number(coupon.discountPercent) || 0;
+      finalDiscount = Math.round((subtotal * couponPercent) / 100);
+      appliedCouponCode = coupon.code;
+    }
+
+    if (finalDiscount < 0) finalDiscount = 0;
+    if (finalDiscount > subtotal) finalDiscount = subtotal;
 
     const shippingSelection = shipping.selection || {};
     const shippingPackage = shipping.package || {};
@@ -209,6 +232,9 @@ export const createOrder = async (req, res) => {
       subtotal,
       shippingFee: finalShipping,
       discount: finalDiscount,
+      couponCode: appliedCouponCode,
+      couponPercent,
+      couponDiscount: finalDiscount,
       total: subtotal + finalShipping - finalDiscount,
       address: addressId,
       notes,
@@ -231,6 +257,10 @@ export const createOrder = async (req, res) => {
         Product.updateOne({ _id: item.product }, { $inc: { stock: -item.quantity } })
       )
     );
+
+    if (appliedCouponCode) {
+      await Coupon.updateOne({ code: appliedCouponCode }, { $inc: { used: 1 } }).catch(() => {});
+    }
 
     if (shippingProvider === "ghn") {
       try {

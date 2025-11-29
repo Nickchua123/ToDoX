@@ -10,7 +10,7 @@ export const connectDB = async () => {
     console.log("Liên kết CSDL thành công!");
   } catch (error) {
     console.error("Lỗi khi kết nối CSDL:", error);
-    process.exit(1); // exit with error
+    process.exit(1); 
   }
 };
 

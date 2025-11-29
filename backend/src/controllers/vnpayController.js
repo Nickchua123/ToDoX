@@ -31,7 +31,8 @@ const maskSecret = (value = "") => {
 };
 
 const logDebug = (...args) => {
-  if (process.env.VNPAY_DEBUG !== "true") return;
+  const enabled = String(process.env.VNPAY_DEBUG || "").toLowerCase() === "true";
+  if (!enabled) return;
   console.log("[VNPAY]", ...args);
 };
 

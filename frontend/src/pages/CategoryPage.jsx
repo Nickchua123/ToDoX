@@ -31,6 +31,14 @@ const formatPrice = (value) => {
   return `${num.toLocaleString("vi-VN")}₫`;
 };
 
+const PRICE_RANGES = [
+  { id: "under-200", label: "Dưới 200.000₫", min: 0, max: 200000 },
+  { id: "200-500", label: "200.000₫ - 500.000₫", min: 200000, max: 500000 },
+  { id: "500-700", label: "500.000₫ - 700.000₫", min: 500000, max: 700000 },
+  { id: "700-1m", label: "700.000₫ - 1.000.000₫", min: 700000, max: 1000000 },
+  { id: "over-1m", label: "Trên 1.000.000₫", min: 1000000, max: Number.POSITIVE_INFINITY },
+];
+
 const calcTag = (price, oldPrice) => {
   if (!Number.isFinite(price) || !Number.isFinite(oldPrice) || oldPrice <= price) return undefined;
   return Math.round(((oldPrice - price) / oldPrice) * 100);
@@ -47,6 +55,7 @@ export default function CategoryPage() {
   const [loadingCategory, setLoadingCategory] = useState(false);
   const [comingSoon, setComingSoon] = useState(true);
   const [page, setPage] = useState(1);
+  const [selectedPriceRanges, setSelectedPriceRanges] = useState([]);
 
   useEffect(() => {
     let ignore = false;
@@ -82,7 +91,9 @@ export default function CategoryPage() {
           slug: p.slug,
           name: p.name,
           price: formatPrice(p.price),
+          priceValue: Number(p.price),
           old: p.oldPrice ? formatPrice(p.oldPrice) : undefined,
+          oldValue: Number(p.oldPrice),
           img: p.images?.[0] || p.image || "/logo.png",
           tag: calcTag(Number(p.price), Number(p.oldPrice)),
         }));
@@ -104,30 +115,40 @@ export default function CategoryPage() {
     };
   }, [activeSlug]);
 
+  const filteredProducts = useMemo(() => {
+    if (!selectedPriceRanges.length) return products;
+    return products.filter((p) => {
+      const price = Number(p.priceValue);
+      if (!Number.isFinite(price)) return false;
+      return selectedPriceRanges.some((rangeId) => {
+        const range = PRICE_RANGES.find((r) => r.id === rangeId);
+        if (!range) return false;
+        return price >= range.min && price < range.max;
+      });
+    });
+  }, [products, selectedPriceRanges]);
+
   const sortedProducts = useMemo(() => {
-    const arr = [...products];
+    const arr = [...filteredProducts];
     switch (sort) {
       case "az":
         return arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
       case "za":
         return arr.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
       case "priceAsc":
-        return arr.sort((a, b) => toNumber(a.price) - toNumber(b.price));
+        return arr.sort((a, b) => toNumber(a.priceValue) - toNumber(b.priceValue));
       case "priceDesc":
-        return arr.sort((a, b) => toNumber(b.price) - toNumber(a.price));
+        return arr.sort((a, b) => toNumber(b.priceValue) - toNumber(a.priceValue));
       default:
         return arr;
     }
-  }, [products, sort]);
+  }, [filteredProducts, sort]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeSlug, sort, products.length]);
+  }, [activeSlug, sort, products.length, selectedPriceRanges.length]);
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(sortedProducts.length / PAGE_SIZE)),
-    [sortedProducts.length]
-  );
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(sortedProducts.length / PAGE_SIZE)), [sortedProducts.length]);
 
   useEffect(() => {
     setPage((prev) => {
@@ -245,11 +266,20 @@ export default function CategoryPage() {
 
             <div className="bg-white p-4 rounded-2xl shadow-sm border">
               <h2 className="text-lg font-semibold mb-3">Chọn mức giá</h2>
-              {["Dưới 200.000₫", "200.000₫ - 500.000₫", "500.000₫ - 700.000₫", "700.000₫ - 1.000.000₫", "Trên 1.000.000₫"].map((p) => (
-                <div key={p} className="flex items-center space-x-2 mb-1">
-                  <Checkbox id={p} />
-                  <label htmlFor={p} className="text-sm">
-                    {p}
+              {PRICE_RANGES.map((range) => (
+                <div key={range.id} className="flex items-center space-x-2 mb-1">
+                  <Checkbox
+                    id={range.id}
+                    checked={selectedPriceRanges.includes(range.id)}
+                    onCheckedChange={(checked) => {
+                      setSelectedPriceRanges((prev) => {
+                        if (checked) return [...prev, range.id];
+                        return prev.filter((id) => id !== range.id);
+                      });
+                    }}
+                  />
+                  <label htmlFor={range.id} className="text-sm cursor-pointer">
+                    {range.label}
                   </label>
                 </div>
               ))}

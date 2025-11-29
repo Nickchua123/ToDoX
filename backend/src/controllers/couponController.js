@@ -11,6 +11,47 @@ export const listCoupons = async (req, res) => {
   }
 };
 
+export const listAvailableCoupons = async (req, res) => {
+  try {
+    const now = new Date();
+    // Dùng aggregation trên collection để tránh cast lỗi khi maxUses/expired null
+    const pipeline = [
+      {
+        $match: {
+          active: true,
+          $and: [
+            {
+              $or: [{ expiresAt: { $gt: now } }, { expiresAt: null }, { expiresAt: { $exists: false } }],
+            },
+            {
+              $or: [
+                { maxUses: { $exists: false } },
+                { maxUses: null },
+                { maxUses: { $lte: 0 } },
+                { $expr: { $lt: ["$used", "$maxUses"] } },
+              ],
+            },
+          ],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ];
+    const coupons = await Coupon.collection.aggregate(pipeline).toArray();
+    const mapped = coupons.map((c) => ({
+      _id: c._id,
+      code: c.code,
+      discountPercent: c.discountPercent,
+      maxUses: c.maxUses,
+      used: c.used,
+      expiresAt: c.expiresAt,
+      active: c.active,
+    }));
+    res.json(mapped);
+  } catch (err) {
+    res.status(500).json({ message: "Không lấy được mã ưu đãi", error: err.message });
+  }
+};
+
 export const createCoupon = async (req, res) => {
   try {
     const { code, discountPercent, maxUses = 0, expiresAt, active = true } = req.body || {};

@@ -1,6 +1,3 @@
-// backend/src/middleware/turnstile.js
-// Cloudflare Turnstile verification middleware
-
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 export async function verifyTurnstile(req, res, next) {
@@ -21,7 +18,7 @@ export async function verifyTurnstile(req, res, next) {
       return res.status(400).json({ message: "Thiếu xác thực CAPTCHA" });
     }
 
-    // Prefer global fetch (Node 18+) if available
+   
     const doFetch = typeof fetch === "function"
       ? fetch
       : (...args) => import("node-fetch").then(({ default: f }) => f(...args));
