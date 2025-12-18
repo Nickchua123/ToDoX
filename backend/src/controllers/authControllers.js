@@ -40,31 +40,55 @@ const ACCESS_COOKIE = "access_token";
 const REFRESH_COOKIE = "refresh_token";
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || "15m";
 const REFRESH_TOKEN_TTL = process.env.REFRESH_TOKEN_TTL || "7d";
-const getRefreshSecret = () => process.env.REFRESH_JWT_SECRET || process.env.JWT_SECRET;
-const signAccessToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
-const signRefreshToken = (id, ver = 0) => jwt.sign({ id, ver }, getRefreshSecret(), { expiresIn: REFRESH_TOKEN_TTL });
+const getRefreshSecret = () =>
+  process.env.REFRESH_JWT_SECRET || process.env.JWT_SECRET;
+const signAccessToken = (id) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
+const signRefreshToken = (id, ver = 0) =>
+  jwt.sign({ id, ver }, getRefreshSecret(), { expiresIn: REFRESH_TOKEN_TTL });
 // Đăng ký với mã xác thực qua email
 export const registerStart = async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Vui lòng cung cấp tên, email và mật khẩu" });
+      return res
+        .status(400)
+        .json({ message: "Vui lòng cung cấp tên, email và mật khẩu" });
     }
     if (!isStrongPassword(password)) {
-    if (!validator.isEmail(String(email))) { return res.status(400).json({ message: "Invalid email" }); }
-      return res.status(400).json({ message: "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt" });
+      if (!validator.isEmail(String(email))) {
+        return res.status(400).json({ message: "Invalid email" });
+      }
+      return res
+        .status(400)
+        .json({
+          message:
+            "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+        });
     }
     //Kiem tra ton tai email va ten dang nhap
     const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedUsername = normalizeUsername(name, normalizedEmail.split("@")[0]);
+    const normalizedUsername = normalizeUsername(
+      name,
+      normalizedEmail.split("@")[0]
+    );
     const existingUser = await User.findOne({ username: normalizedUsername });
-    if (existingUser) return res.status(400).json({ message: "Tên người dùng đã tồn tại" });
+    if (existingUser)
+      return res.status(400).json({ message: "Tên người dùng đã tồn tại" });
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(400).json({ message: "Email đã tồn tại" });
     const now = new Date();
-    const existingPending = await PendingRegistration.findOne({ email: normalizedEmail });
-    if (existingPending && existingPending.lastSentAt && now - existingPending.lastSentAt < 60 * 1000) {
-      return res.status(429).json({ message: "Vui lòng đợi 60 giây trước khi gửi lại mã" });
+    const existingPending = await PendingRegistration.findOne({
+      email: normalizedEmail,
+    });
+    if (
+      existingPending &&
+      existingPending.lastSentAt &&
+      now - existingPending.lastSentAt < 60 * 1000
+    ) {
+      return res
+        .status(429)
+        .json({ message: "Vui lòng đợi 60 giây trước khi gửi lại mã" });
     }
     const passwordHash = await bcrypt.hash(String(password), 10);
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
@@ -106,21 +130,44 @@ export const registerStart = async (req, res) => {
 export const registerVerify = async (req, res) => {
   try {
     const { email, code } = req.body || {};
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
     const safeCode = String(code || "").trim();
-    if (!normalizedEmail || !safeCode) return res.status(400).json({ message: "Thiếu email hoặc mã" });
-    if (!validator.isEmail(normalizedEmail)) return res.status(400).json({ message: "Email không hợp lệ" });
-    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
-    if (!pending) return res.status(400).json({ message: "Không tìm thấy yêu cầu đăng ký" });
-    if (pending.expiresAt < new Date()) return res.status(400).json({ message: "Mã đã hết hạn" });
-    if (pending.attempts >= 5) return res.status(429).json({ message: "Quá số lần thử, vui lòng gửi lại mã", attemptsRemaining: 0 });
+    if (!normalizedEmail || !safeCode)
+      return res.status(400).json({ message: "Thiếu email hoặc mã" });
+    if (!validator.isEmail(normalizedEmail))
+      return res.status(400).json({ message: "Email không hợp lệ" });
+    const pending = await PendingRegistration.findOne({
+      email: normalizedEmail,
+    });
+    if (!pending)
+      return res
+        .status(400)
+        .json({ message: "Không tìm thấy yêu cầu đăng ký" });
+    if (pending.expiresAt < new Date())
+      return res.status(400).json({ message: "Mã đã hết hạn" });
+    if (pending.attempts >= 5)
+      return res
+        .status(429)
+        .json({
+          message: "Quá số lần thử, vui lòng gửi lại mã",
+          attemptsRemaining: 0,
+        });
     const codeHash = crypto.createHash("sha256").update(safeCode).digest("hex");
     if (pending.codeHash !== codeHash) {
       pending.attempts += 1;
       await pending.save();
-      return res.status(400).json({ message: "Mã không chính xác", attemptsRemaining: Math.max(0, 5 - pending.attempts) });
+      return res
+        .status(400)
+        .json({
+          message: "Mã không chính xác",
+          attemptsRemaining: Math.max(0, 5 - pending.attempts),
+        });
     }
-    const baseUsername = pending.username || normalizeUsername(pending.name, normalizedEmail.split("@")[0]);
+    const baseUsername =
+      pending.username ||
+      normalizeUsername(pending.name, normalizedEmail.split("@")[0]);
     let finalUsername = baseUsername;
     let suffix = 1;
     while (await User.exists({ username: finalUsername })) {
@@ -137,7 +184,9 @@ export const registerVerify = async (req, res) => {
       password: pending.passwordHash,
     });
     await PendingRegistration.deleteOne({ _id: pending._id });
-    return res.status(201).json({ message: "Đăng ký thành công", userId: user._id });
+    return res
+      .status(201)
+      .json({ message: "Đăng ký thành công", userId: user._id });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
@@ -145,13 +194,23 @@ export const registerVerify = async (req, res) => {
 export const registerResend = async (req, res) => {
   try {
     const { email } = req.body || {};
-    const normalizedEmail = String(email || "").trim().toLowerCase();
-    if (!normalizedEmail) return res.status(400).json({ message: "Thiếu email" });
-    const pending = await PendingRegistration.findOne({ email: normalizedEmail });
-    if (!pending) return res.status(400).json({ message: "Không tìm thấy yêu cầu đăng ký" });
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
+    if (!normalizedEmail)
+      return res.status(400).json({ message: "Thiếu email" });
+    const pending = await PendingRegistration.findOne({
+      email: normalizedEmail,
+    });
+    if (!pending)
+      return res
+        .status(400)
+        .json({ message: "Không tìm thấy yêu cầu đăng ký" });
     const now = new Date();
     if (pending.lastSentAt && now - pending.lastSentAt < 60 * 1000) {
-      return res.status(429).json({ message: "Vui lòng đợi 60 giây trước khi gửi lại mã" });
+      return res
+        .status(429)
+        .json({ message: "Vui lòng đợi 60 giây trước khi gửi lại mã" });
     }
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
     pending.codeHash = crypto.createHash("sha256").update(code).digest("hex");
@@ -178,30 +237,38 @@ export const registerResend = async (req, res) => {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
-// Đăng nhập/ hồ sơ/ đăng xuất 
+// Đăng nhập/ hồ sơ/ đăng xuất
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ message: "Thiếu thông tin đăng nhập" });
+    if (!email || !password)
+      return res.status(400).json({ message: "Thiếu thông tin đăng nhập" });
     const normalizedEmail = String(email).trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(401).json({ message: "Sai tài khoản hoặc mật khẩu!" });
+    if (!user)
+      return res.status(401).json({ message: "Sai tài khoản hoặc mật khẩu!" });
     const valid = await bcrypt.compare(String(password), user.password);
     if (!valid) return res.status(401).json({ message: "Sai mật khẩu" });
-    const at = signAccessToken(user._id);const rt = signRefreshToken(user._id, user.tokenVersion || 0);    
+    const at = signAccessToken(user._id);
+    const rt = signRefreshToken(user._id, user.tokenVersion || 0);
     res.cookie(ACCESS_COOKIE, at, COOKIE_OPTIONS);
-        res.cookie(REFRESH_COOKIE, rt, COOKIE_OPTIONS);
-            try { res.clearCookie("token", COOKIE_OPTIONS); } catch {};
+    res.cookie(REFRESH_COOKIE, rt, COOKIE_OPTIONS);
+    try {
+      res.clearCookie("token", COOKIE_OPTIONS);
+    } catch {}
     try {
       if (typeof req.csrfToken === "function") {
         const xsrf = req.csrfToken();
         res.cookie("XSRF-TOKEN", xsrf, XSRF_COOKIE_OPTIONS);
+        console.log("Set XSRF-TOKEN cookie on login", xsrf);
       }
     } catch {}
     res.status(200).json({ message: "Đăng nhập thành công", userId: user._id });
-  } catch (err) {res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
   }
 };
+
 export const profile = async (req, res) => {
   try {
     let userId = req.userId;
@@ -222,8 +289,12 @@ export const profile = async (req, res) => {
 };
 export const logout = (req, res) => {
   res.clearCookie("token", COOKIE_OPTIONS);
-  try { res.clearCookie("access_token", COOKIE_OPTIONS); } catch {}
-  try { res.clearCookie("refresh_token", COOKIE_OPTIONS); } catch {}
+  try {
+    res.clearCookie("access_token", COOKIE_OPTIONS);
+  } catch {}
+  try {
+    res.clearCookie("refresh_token", COOKIE_OPTIONS);
+  } catch {}
   res.clearCookie("XSRF-TOKEN", XSRF_COOKIE_OPTIONS);
   res.status(200).json({ message: "Đăng xuất thành công" });
 };
@@ -232,27 +303,40 @@ export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body || {};
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới" });
     }
     if (!isStrongPassword(newPassword)) {
       return res.status(400).json({
-        message: "Mật khẩu mới yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+        message:
+          "Mật khẩu mới yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
       });
     }
-    const user = await User.findById(req.userId).select("+password +tokenVersion");
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const user = await User.findById(req.userId).select(
+      "+password +tokenVersion"
+    );
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     const valid = await bcrypt.compare(String(currentPassword), user.password);
-    if (!valid) return res.status(401).json({ message: "Mật khẩu hiện tại không đúng" });
+    if (!valid)
+      return res.status(401).json({ message: "Mật khẩu hiện tại không đúng" });
 
     user.password = await bcrypt.hash(String(newPassword), 10);
     user.tokenVersion = Number(user.tokenVersion || 0) + 1; // Thu hồi refresh cũ
     await user.save();
 
-    try { res.clearCookie(ACCESS_COOKIE, COOKIE_OPTIONS); } catch {}
-    try { res.clearCookie(REFRESH_COOKIE, COOKIE_OPTIONS); } catch {}
+    try {
+      res.clearCookie(ACCESS_COOKIE, COOKIE_OPTIONS);
+    } catch {}
+    try {
+      res.clearCookie(REFRESH_COOKIE, COOKIE_OPTIONS);
+    } catch {}
     res.clearCookie("XSRF-TOKEN", XSRF_COOKIE_OPTIONS);
 
-    return res.status(200).json({ message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại." });
+    return res
+      .status(200)
+      .json({ message: "Đổi mật khẩu thành công. Vui lòng đăng nhập lại." });
   } catch (err) {
     return res.status(500).json({ message: "Không đổi được mật khẩu" });
   }
@@ -261,17 +345,27 @@ export const changePassword = async (req, res) => {
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body || {};
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
     if (!normalizedEmail) {
       return res.status(400).json({ message: "Vui lòng nhập email" });
     }
     const user = await User.findOne({ email: normalizedEmail });
-    
+
     if (!user) {
-      return res.status(200).json({ message: "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn." });
+      return res
+        .status(200)
+        .json({
+          message:
+            "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn.",
+        });
     }
     const rawToken = crypto.randomBytes(32).toString("hex");
-    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
     const expires = new Date(Date.now() + 15 * 60 * 1000);
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = expires;
@@ -288,9 +382,13 @@ export const forgotPassword = async (req, res) => {
                <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>
                </body></html>`,
       });
-    } catch (mailErr) {
-    }
-    return res.status(200).json({ message: "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn." });
+    } catch (mailErr) {}
+    return res
+      .status(200)
+      .json({
+        message:
+          "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn.",
+      });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
@@ -300,28 +398,45 @@ export const resetPassword = async (req, res) => {
     const { token, password } = req.body || {};
     // Align message with 12-char strong password policy
     if (token && !isStrongPassword(password)) {
-      return res.status(400).json({ message: "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt" });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+        });
     }
     if (!token || !password) {
       return res.status(400).json({ message: "Thiếu token hoặc mật khẩu mới" });
     }
     if (!isStrongPassword(password)) {
-      return res.status(400).json({ message: "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt" });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+        });
     }
-    const hashedToken = crypto.createHash("sha256").update(String(token)).digest("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(String(token))
+      .digest("hex");
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() },
     });
     if (!user) {
-      return res.status(400).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+      return res
+        .status(400)
+        .json({ message: "Token không hợp lệ hoặc đã hết hạn" });
     }
     user.password = await bcrypt.hash(String(password), 10);
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
     user.tokenVersion = (Number(user.tokenVersion) || 0) + 1;
     await user.save();
-    return res.status(200).json({ message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập." });
+    return res
+      .status(200)
+      .json({ message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập." });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
@@ -329,7 +444,9 @@ export const resetPassword = async (req, res) => {
 // ========== Tiện ích: kiểm tra tồn tại email (phục vụ UI) ==========
 export const checkEmail = async (req, res) => {
   try {
-    const normalizedEmail = String(req.body?.email || "").trim().toLowerCase();
+    const normalizedEmail = String(req.body?.email || "")
+      .trim()
+      .toLowerCase();
     if (!normalizedEmail) {
       return res.status(400).json({ message: "Thiếu email" });
     }
@@ -345,7 +462,8 @@ export const refresh = async (req, res) => {
     if (!rt) return res.status(401).json({ message: "Thiếu refresh token" });
     const decoded = jwt.verify(rt, getRefreshSecret());
     const user = await User.findById(decoded.id).select("_id tokenVersion");
-    if (!user) return res.status(401).json({ message: "Refresh token không hợp lệ" });
+    if (!user)
+      return res.status(401).json({ message: "Refresh token không hợp lệ" });
     const ver = Number(decoded.ver || 0);
     if (Number(user.tokenVersion || 0) !== ver) {
       return res.status(401).json({ message: "Refresh token đã bị thu hồi" });
@@ -359,5 +477,3 @@ export const refresh = async (req, res) => {
     return res.status(401).json({ message: "Refresh token không hợp lệ" });
   }
 };
-
-
