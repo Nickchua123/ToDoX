@@ -3,6 +3,11 @@ import { toast } from "sonner";
 import api from "@/lib/axios";
 
 const useQuery = () => new URLSearchParams(window.location.search);
+const strongPwd = (pwd = "") =>
+  String(pwd).length >= 12 &&
+  /[A-Z]/.test(pwd) &&
+  /\d/.test(pwd) &&
+  /[^A-Za-z0-9]/.test(pwd);
 
 const ResetPassword = () => {
   const query = useQuery();
@@ -12,8 +17,8 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password.length < 8) {
-      toast.warning("Mật khẩu phải tối thiểu 8 ký tự");
+    if (!strongPwd(password)) {
+      toast.warning("Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt");
       return;
     }
     setLoading(true);

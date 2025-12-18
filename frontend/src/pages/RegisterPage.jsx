@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import { useNavigate, Link } from "react-router-dom";
@@ -7,14 +7,29 @@ import { Eye, EyeOff } from "lucide-react";
 import { prepareCsrfHeaders } from "@/lib/csrf";
 
 const inputClass =
-  "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition";
+  "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition bg-white/80";
+const isValidEmail = (v = "") => /\S+@\S+\.\S+/.test(String(v).trim());
+const strongPwd = (pwd = "") =>
+  String(pwd).length >= 12 &&
+  /[A-Z]/.test(pwd) &&
+  /\d/.test(pwd) &&
+  /[^A-Za-z0-9]/.test(pwd);
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
   const [captcha, setCaptcha] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const emailOk = useMemo(() => isValidEmail(formData.email), [formData.email]);
+  const pwdOk = useMemo(
+    () => strongPwd(formData.password),
+    [formData.password]
+  );
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,10 +37,11 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password.length < 8) {
-      toast.warning("Mật khẩu phải có ít nhất 8 ký tự!");
-      return;
-    }
+    if (!emailOk) return toast.warning("Email không hợp lệ.");
+    if (!pwdOk)
+      return toast.warning(
+        "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt"
+      );
 
     setLoading(true);
     try {
@@ -35,7 +51,10 @@ const RegisterPage = () => {
       await api.post("/auth/register/start", payload, { headers });
       toast.success("Đã gửi mã xác thực đến email.");
       try {
-        localStorage.setItem(`register:otp:last:${formData.email}`, String(Date.now()));
+        localStorage.setItem(
+          `register:otp:last:${formData.email}`,
+          String(Date.now())
+        );
       } catch (storageErr) {
         console.warn("Không thể lưu timestamp OTP", storageErr);
       }
@@ -49,17 +68,19 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fff5f0] via-white to-[#fefcff] py-12 px-4 flex items-center justify-center">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-md">
         <div className="bg-white/90 backdrop-blur border border-orange-100 shadow-xl rounded-3xl p-8 space-y-6">
           <div className="text-center space-y-2">
-            <p className="text-xs font-semibold tracking-[0.4em] text-gray-400">ND STYLE</p>
-            <h1 className="text-3xl font-semibold text-brand-dark">Tạo tài khoản mới</h1>
-            <p className="text-sm text-gray-500">Nhận ưu đãi độc quyền và theo dõi đơn hàng dễ dàng</p>
+            <h1 className="text-3xl font-semibold text-brand-dark">
+              Tạo tài khoản mới
+            </h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-600">Tên người dùng</label>
+              <label className="text-sm font-medium text-gray-600">
+                Tên người dùng
+              </label>
               <input
                 type="text"
                 name="name"
@@ -83,12 +104,14 @@ const RegisterPage = () => {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-600">Mật khẩu</label>
+              <label className="text-sm font-medium text-gray-600">
+                Mật khẩu
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  placeholder="Ít nhất 8 ký tự"
+                  placeholder="Ít nhất 12 ký tự, có hoa/số/ký tự đặc biệt"
                   className={`${inputClass} pr-10`}
                   value={formData.password}
                   onChange={handleChange}
@@ -101,10 +124,13 @@ const RegisterPage = () => {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setShowPassword((prev) => !prev)}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
-              <p className="text-xs text-gray-500">Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt.</p>
             </div>
 
             <button
@@ -126,7 +152,10 @@ const RegisterPage = () => {
 
           <p className="text-center text-sm text-gray-600">
             Đã có tài khoản?{" "}
-            <Link to="/login" className="text-brand-primary font-medium hover:underline">
+            <Link
+              to="/login"
+              className="text-brand-primary font-medium hover:underline"
+            >
               Đăng nhập ngay
             </Link>
           </p>

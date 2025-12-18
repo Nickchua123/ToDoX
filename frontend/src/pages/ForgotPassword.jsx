@@ -1,19 +1,22 @@
-﻿import React, { useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/axios";
 import Turnstile from "@/components/Turnstile";
 import { Link } from "react-router-dom";
 
 const inputClass =
-  "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition";
+  "w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-brand-primary/70 focus:outline-none transition bg-white/80";
+const isValidEmail = (v = "") => /\S+@\S+\.\S+/.test(String(v).trim());
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [captcha, setCaptcha] = useState(null);
+  const emailOk = useMemo(() => isValidEmail(email), [email]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!emailOk) return toast.warning("Email không hợp lệ");
     setLoading(true);
     try {
       const check = await api.post("/auth/check-email", { email });
@@ -38,14 +41,16 @@ const ForgotPassword = () => {
       <div className="w-full max-w-md">
         <div className="bg-white/90 backdrop-blur border border-orange-100 shadow-xl rounded-3xl p-8 space-y-6">
           <div className="text-center space-y-2">
-            <p className="text-xs font-semibold tracking-[0.4em] text-gray-400">ND STYLE</p>
-            <h1 className="text-3xl font-semibold text-brand-dark">Quên mật khẩu</h1>
-            <p className="text-sm text-gray-500">Nhập email để nhận hướng dẫn đặt lại mật khẩu</p>
+            <h1 className="text-3xl font-semibold text-brand-dark">
+              Quên mật khẩu
+            </h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-600">Email đăng ký</label>
+              <label className="text-sm font-medium text-gray-600">
+                Email đăng ký
+              </label>
               <input
                 type="email"
                 name="email"
@@ -74,7 +79,10 @@ const ForgotPassword = () => {
           </div>
 
           <p className="text-center text-sm text-gray-600">
-            <Link to="/login" className="text-brand-primary font-medium hover:underline">
+            <Link
+              to="/login"
+              className="text-brand-primary font-medium hover:underline"
+            >
               Quay lại đăng nhập
             </Link>
           </p>
