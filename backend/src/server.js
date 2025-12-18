@@ -68,6 +68,12 @@ const ALLOWED_ORIGINS = String(rawOrigins)
   .map((s) => s.trim())
   .filter(Boolean);
 
+// Allow serving external assets (e.g., Cloudinary) when CSP is applied
+const assetOrigins = String(process.env.ASSET_ORIGINS || "https://res.cloudinary.com")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const allowedOriginSet = new Set([
   ...ALLOWED_ORIGINS,
   FRONTEND_URL,
@@ -119,7 +125,7 @@ app.use(
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://challenges.cloudflare.com"],
-          imgSrc: ["'self'", "data:"],
+          imgSrc: ["'self'", "data:", ...assetOrigins],
           fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
           connectSrc: connectSources,
           frameSrc: ["'self'", "https://challenges.cloudflare.com"],
