@@ -59,12 +59,10 @@ export const registerStart = async (req, res) => {
       if (!validator.isEmail(String(email))) {
         return res.status(400).json({ message: "Invalid email" });
       }
-      return res
-        .status(400)
-        .json({
-          message:
-            "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
-        });
+      return res.status(400).json({
+        message:
+          "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+      });
     }
     //Kiem tra ton tai email va ten dang nhap
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -148,22 +146,18 @@ export const registerVerify = async (req, res) => {
     if (pending.expiresAt < new Date())
       return res.status(400).json({ message: "Mã đã hết hạn" });
     if (pending.attempts >= 5)
-      return res
-        .status(429)
-        .json({
-          message: "Quá số lần thử, vui lòng gửi lại mã",
-          attemptsRemaining: 0,
-        });
+      return res.status(429).json({
+        message: "Quá số lần thử, vui lòng gửi lại mã",
+        attemptsRemaining: 0,
+      });
     const codeHash = crypto.createHash("sha256").update(safeCode).digest("hex");
     if (pending.codeHash !== codeHash) {
       pending.attempts += 1;
       await pending.save();
-      return res
-        .status(400)
-        .json({
-          message: "Mã không chính xác",
-          attemptsRemaining: Math.max(0, 5 - pending.attempts),
-        });
+      return res.status(400).json({
+        message: "Mã không chính xác",
+        attemptsRemaining: Math.max(0, 5 - pending.attempts),
+      });
     }
     const baseUsername =
       pending.username ||
@@ -354,12 +348,10 @@ export const forgotPassword = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return res
-        .status(200)
-        .json({
-          message:
-            "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn.",
-        });
+      return res.status(200).json({
+        message:
+          "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn.",
+      });
     }
     const rawToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
@@ -383,12 +375,10 @@ export const forgotPassword = async (req, res) => {
                </body></html>`,
       });
     } catch (mailErr) {}
-    return res
-      .status(200)
-      .json({
-        message:
-          "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn.",
-      });
+    return res.status(200).json({
+      message:
+        "Chúng tôi đã gửi hướng dẫn đặt lại. Vui lòng kiểm tra email của bạn.",
+    });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
@@ -398,23 +388,19 @@ export const resetPassword = async (req, res) => {
     const { token, password } = req.body || {};
     // Align message with 12-char strong password policy
     if (token && !isStrongPassword(password)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
-        });
+      return res.status(400).json({
+        message:
+          "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+      });
     }
     if (!token || !password) {
       return res.status(400).json({ message: "Thiếu token hoặc mật khẩu mới" });
     }
     if (!isStrongPassword(password)) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
-        });
+      return res.status(400).json({
+        message:
+          "Mật khẩu yếu. Yêu cầu tối thiểu 12 ký tự, có chữ hoa, số và ký tự đặc biệt",
+      });
     }
     const hashedToken = crypto
       .createHash("sha256")

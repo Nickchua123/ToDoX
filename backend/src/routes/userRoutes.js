@@ -22,9 +22,7 @@ router.patch("/me", updateMe);
 router.post("/delete-request", requestDeleteAccount);
 router.post("/delete-cancel", cancelDeleteAccount);
 
-router.route("/")
-  .get(requireAdmin, listUsers)
-  .post(requireAdmin, createUser);
+router.route("/").get(requireAdmin, listUsers).post(requireAdmin, createUser);
 router.get("/:userId", requireAdmin, getUserById);
 router.patch("/:userId", requireAdmin, updateUser);
 router.delete("/:userId", requireAdmin, deleteUser);

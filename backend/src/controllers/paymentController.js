@@ -14,39 +14,63 @@ export const listPayments = async (req, res) => {
     ]);
     res.json({ total, page: Number(page) || 1, items });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được thanh toán", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được thanh toán", error: err.message });
   }
 };
 
 export const createPayment = async (req, res) => {
   try {
-    const { method, provider, status = "pending", reference, amount } = req.body || {};
+    const {
+      method,
+      provider,
+      status = "pending",
+      reference,
+      amount,
+    } = req.body || {};
     if (!method || amount == null) {
       return res.status(400).json({ message: "Thiếu method hoặc amount" });
     }
-    const payment = await Payment.create({ method, provider, status, reference, amount });
+    const payment = await Payment.create({
+      method,
+      provider,
+      status,
+      reference,
+      amount,
+    });
     res.status(201).json(payment);
   } catch (err) {
-    res.status(500).json({ message: "Không tạo được thanh toán", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không tạo được thanh toán", error: err.message });
   }
 };
 
 export const updatePayment = async (req, res) => {
   try {
-    const payment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!payment) return res.status(404).json({ message: "Không tìm thấy thanh toán" });
+    const payment = await Payment.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!payment)
+      return res.status(404).json({ message: "Không tìm thấy thanh toán" });
     res.json(payment);
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được thanh toán", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được thanh toán", error: err.message });
   }
 };
 
 export const deletePayment = async (req, res) => {
   try {
     const payment = await Payment.findByIdAndDelete(req.params.id);
-    if (!payment) return res.status(404).json({ message: "Không tìm thấy thanh toán" });
+    if (!payment)
+      return res.status(404).json({ message: "Không tìm thấy thanh toán" });
     res.json({ message: "Đã xóa thanh toán" });
   } catch (err) {
-    res.status(500).json({ message: "Không xóa được thanh toán", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xóa được thanh toán", error: err.message });
   }
 };

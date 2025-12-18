@@ -31,7 +31,8 @@ export const listReviews = async (req, res) => {
     const { product, page = 1, limit = 10, includeStats } = req.query;
     const query = { approved: true, hidden: false };
     if (product) {
-      if (!isValidObjectId(product)) return res.status(400).json({ message: "productId không hợp lệ" });
+      if (!isValidObjectId(product))
+        return res.status(400).json({ message: "productId không hợp lệ" });
       query.product = new mongoose.Types.ObjectId(product);
     }
     const perPage = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
@@ -42,26 +43,27 @@ export const listReviews = async (req, res) => {
       ...(query.product ? { product: query.product } : {}),
     };
 
-    const summaryPromise = includeStats === "true"
-      ? Review.aggregate([
-          { $match: matchStage },
-          {
-            $group: {
-              _id: null,
-              average: { $avg: "$rating" },
-              count: { $sum: 1 },
+    const summaryPromise =
+      includeStats === "true"
+        ? Review.aggregate([
+            { $match: matchStage },
+            {
+              $group: {
+                _id: null,
+                average: { $avg: "$rating" },
+                count: { $sum: 1 },
+              },
             },
-          },
-        ])
-          .then((stats) => ({
-            average: stats?.[0]?.average || 0,
-            total: stats?.[0]?.count || 0,
-          }))
-          .catch((err) => {
-            console.error("[reviews] summary aggregate error", err);
-            return null;
-          })
-      : Promise.resolve(null);
+          ])
+            .then((stats) => ({
+              average: stats?.[0]?.average || 0,
+              total: stats?.[0]?.count || 0,
+            }))
+            .catch((err) => {
+              console.error("[reviews] summary aggregate error", err);
+              return null;
+            })
+        : Promise.resolve(null);
 
     const [items, total, summary] = await Promise.all([
       Review.find(query)
@@ -74,28 +76,35 @@ export const listReviews = async (req, res) => {
     ]);
     res.json({ total, page: Number(page) || 1, items, summary });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được đánh giá", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được đánh giá", error: err.message });
   }
 };
 
 export const createReview = async (req, res) => {
   try {
     const { product, rating, title, body } = req.body || {};
-    if (!isValidObjectId(product)) return res.status(400).json({ message: "productId không hợp lệ" });
+    if (!isValidObjectId(product))
+      return res.status(400).json({ message: "productId không hợp lệ" });
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ message: "Điểm rating 1-5" });
     }
     const exists = await Product.exists({ _id: product });
-    if (!exists) return res.status(400).json({ message: "Sản phẩm không tồn tại" });
+    if (!exists)
+      return res.status(400).json({ message: "Sản phẩm không tồn tại" });
     const hasReviewed = await Review.exists({ product, user: req.userId });
-    if (hasReviewed) return res.status(409).json({ message: "Bạn đã đánh giá sản phẩm này" });
+    if (hasReviewed)
+      return res.status(409).json({ message: "Bạn đã đánh giá sản phẩm này" });
     const purchased = await Order.exists({
       user: req.userId,
       "items.product": product,
       status: "delivered",
     });
     if (!purchased) {
-      return res.status(403).json({ message: "Bạn cần mua sản phẩm này trước khi đánh giá" });
+      return res
+        .status(403)
+        .json({ message: "Bạn cần mua sản phẩm này trước khi đánh giá" });
     }
     const review = await Review.create({
       product,
@@ -108,7 +117,9 @@ export const createReview = async (req, res) => {
     });
     res.status(201).json(review);
   } catch (err) {
-    res.status(500).json({ message: "Không tạo được đánh giá", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không tạo được đánh giá", error: err.message });
   }
 };
 
@@ -116,10 +127,12 @@ export const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
     const review = await Review.findOne({ _id: id, user: req.userId });
-    if (!review) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    if (!review)
+      return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     const { rating, title, body } = req.body || {};
     if (rating) {
-      if (rating < 1 || rating > 5) return res.status(400).json({ message: "Điểm rating 1-5" });
+      if (rating < 1 || rating > 5)
+        return res.status(400).json({ message: "Điểm rating 1-5" });
       review.rating = rating;
     }
     if (typeof title !== "undefined") review.title = title;
@@ -132,7 +145,9 @@ export const updateReview = async (req, res) => {
     await recalcProductRating(review.product);
     res.json(review);
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được đánh giá", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được đánh giá", error: err.message });
   }
 };
 
@@ -145,11 +160,14 @@ export const deleteReview = async (req, res) => {
       query.user = req.userId;
     }
     const removed = await Review.findOneAndDelete(query);
-    if (!removed) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    if (!removed)
+      return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     await recalcProductRating(removed.product);
     res.json({ message: "Đã xóa đánh giá" });
   } catch (err) {
-    res.status(500).json({ message: "Không xóa được đánh giá", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xóa được đánh giá", error: err.message });
   }
 };
 
@@ -158,7 +176,8 @@ export const listAllReviews = async (req, res) => {
     const { product, page = 1, limit = 10, status } = req.query;
     const query = {};
     if (product) {
-      if (!isValidObjectId(product)) return res.status(400).json({ message: "productId không hợp lệ" });
+      if (!isValidObjectId(product))
+        return res.status(400).json({ message: "productId không hợp lệ" });
       query.product = product;
     }
     if (status === "pending") query.approved = false;
@@ -179,7 +198,12 @@ export const listAllReviews = async (req, res) => {
     ]);
     res.json({ total, page: Number(page) || 1, items });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được danh sách đánh giá", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Không lấy được danh sách đánh giá",
+        error: err.message,
+      });
   }
 };
 
@@ -188,14 +212,22 @@ export const approveReview = async (req, res) => {
     const { id } = req.params;
     const review = await Review.findByIdAndUpdate(
       id,
-      { approved: true, approvedAt: new Date(), approvedBy: req.userId, hidden: false },
+      {
+        approved: true,
+        approvedAt: new Date(),
+        approvedBy: req.userId,
+        hidden: false,
+      },
       { new: true }
     );
-    if (!review) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    if (!review)
+      return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     await recalcProductRating(review.product);
     res.json({ message: "Đã duyệt đánh giá", review });
   } catch (err) {
-    res.status(500).json({ message: "Không duyệt được đánh giá", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không duyệt được đánh giá", error: err.message });
   }
 };
 
@@ -208,13 +240,19 @@ export const hideReview = async (req, res) => {
       { hidden: Boolean(hidden), ...(hidden ? { approved: true } : {}) },
       { new: true }
     );
-    if (!review) return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    if (!review)
+      return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     await recalcProductRating(review.product);
     res.json({
       message: hidden ? "Đã ẩn đánh giá" : "Đã hiện đánh giá",
       review,
     });
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật trạng thái hiển thị", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Không cập nhật trạng thái hiển thị",
+        error: err.message,
+      });
   }
 };

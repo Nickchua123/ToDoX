@@ -35,27 +35,31 @@ export const listCategories = async (req, res) => {
     const skip = (pageNumber - 1) * perPage;
 
     const [items, total] = await Promise.all([
-      Category.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(perPage),
+      Category.find(query).sort({ createdAt: -1 }).skip(skip).limit(perPage),
       Category.countDocuments(query),
     ]);
     res.json({ total, page: pageNumber, items });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được danh mục", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được danh mục", error: err.message });
   }
 };
 
 export const getCategory = async (req, res) => {
   try {
     const { idOrSlug } = req.params;
-    const cond = isValidObjectId(idOrSlug) ? { _id: idOrSlug } : { slug: idOrSlug };
+    const cond = isValidObjectId(idOrSlug)
+      ? { _id: idOrSlug }
+      : { slug: idOrSlug };
     const category = await Category.findOne(cond);
-    if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
+    if (!category)
+      return res.status(404).json({ message: "Không tìm thấy danh mục" });
     res.json(category);
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được danh mục", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được danh mục", error: err.message });
   }
 };
 
@@ -64,7 +68,8 @@ export const createCategory = async (req, res) => {
     const { name, slug, description, image, parent } = req.body || {};
     if (!name) return res.status(400).json({ message: "Thiếu tên danh mục" });
     const finalSlug = slugify(slug || name);
-    if (!finalSlug) return res.status(400).json({ message: "Slug không hợp lệ" });
+    if (!finalSlug)
+      return res.status(400).json({ message: "Slug không hợp lệ" });
 
     if (parent && !isValidObjectId(parent)) {
       return res.status(400).json({ message: "Parent không hợp lệ" });
@@ -81,14 +86,17 @@ export const createCategory = async (req, res) => {
     });
     res.status(201).json(doc);
   } catch (err) {
-    res.status(500).json({ message: "Không tạo được danh mục", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không tạo được danh mục", error: err.message });
   }
 };
 
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidObjectId(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!isValidObjectId(id))
+      return res.status(400).json({ message: "ID không hợp lệ" });
     const update = { ...req.body };
     if (update.name && !update.slug) {
       update.slug = slugify(update.name);
@@ -99,25 +107,36 @@ export const updateCategory = async (req, res) => {
     }
     if (update.parent === "null") update.parent = null;
 
-    const category = await Category.findByIdAndUpdate(id, update, { new: true });
-    if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
+    const category = await Category.findByIdAndUpdate(id, update, {
+      new: true,
+    });
+    if (!category)
+      return res.status(404).json({ message: "Không tìm thấy danh mục" });
     res.json(category);
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được danh mục", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được danh mục", error: err.message });
   }
 };
 
 export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidObjectId(id)) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!isValidObjectId(id))
+      return res.status(400).json({ message: "ID không hợp lệ" });
     const child = await Category.findOne({ parent: id });
-    if (child) return res.status(400).json({ message: "Còn danh mục con, không thể xóa" });
+    if (child)
+      return res
+        .status(400)
+        .json({ message: "Còn danh mục con, không thể xóa" });
     const removed = await Category.findByIdAndDelete(id);
-    if (!removed) return res.status(404).json({ message: "Không tìm thấy danh mục" });
+    if (!removed)
+      return res.status(404).json({ message: "Không tìm thấy danh mục" });
     res.json({ message: "Đã xóa danh mục" });
   } catch (err) {
-    res.status(500).json({ message: "Không xóa được danh mục", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xóa được danh mục", error: err.message });
   }
 };
-

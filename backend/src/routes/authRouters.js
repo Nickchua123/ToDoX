@@ -1,5 +1,17 @@
 import express from "express";
-import {  registerStart,registerVerify,registerResend, login, profile, logout, forgotPassword, resetPassword,checkEmail,refresh,changePassword,} from "../controllers/authControllers.js";
+import {
+  registerStart,
+  registerVerify,
+  registerResend,
+  login,
+  profile,
+  logout,
+  forgotPassword,
+  resetPassword,
+  checkEmail,
+  refresh,
+  changePassword,
+} from "../controllers/authControllers.js";
 import rateLimit from "express-rate-limit";
 import { requireAuth } from "../middleware/auth.js";
 import { verifyTurnstile } from "../middleware/turnstile.js";
@@ -35,7 +47,12 @@ const forgotLimiter = rateLimit({
 
 router.post("/register/start", registerLimiter, verifyTurnstile, registerStart);
 router.post("/register/verify", registerLimiter, registerVerify);
-router.post("/register/resend", registerLimiter, verifyTurnstile, registerResend);
+router.post(
+  "/register/resend",
+  registerLimiter,
+  verifyTurnstile,
+  registerResend
+);
 router.post("/check-email", registerLimiter, checkEmail);
 
 router.post("/login", loginLimiter, verifyTurnstile, login);
@@ -47,4 +64,3 @@ router.post("/forgot", forgotLimiter, verifyTurnstile, forgotPassword);
 router.post("/reset", resetPassword);
 
 export default router;
-

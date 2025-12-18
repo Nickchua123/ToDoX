@@ -15,4 +15,3 @@ const pendingRegistrationSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("PendingRegistration", pendingRegistrationSchema);
-

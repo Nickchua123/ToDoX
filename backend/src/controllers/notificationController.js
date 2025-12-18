@@ -18,7 +18,10 @@ export const listNotifications = async (req, res) => {
     if (String(unreadOnly) === "true") query.isRead = false;
 
     const [items, total, unreadCount] = await Promise.all([
-      Notification.find(query).sort({ createdAt: -1 }).skip(skip).limit(perPage),
+      Notification.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(perPage),
       Notification.countDocuments(query),
       Notification.countDocuments({ user: req.userId, isRead: false }),
     ]);
@@ -30,7 +33,9 @@ export const listNotifications = async (req, res) => {
       unreadCount,
     });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được thông báo", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được thông báo", error: err.message });
   }
 };
 
@@ -45,19 +50,30 @@ export const markNotificationRead = async (req, res) => {
       { isRead: true, readAt: new Date() },
       { new: true }
     );
-    if (!notification) return res.status(404).json({ message: "Không tìm thấy thông báo" });
-    const unreadCount = await Notification.countDocuments({ user: req.userId, isRead: false });
+    if (!notification)
+      return res.status(404).json({ message: "Không tìm thấy thông báo" });
+    const unreadCount = await Notification.countDocuments({
+      user: req.userId,
+      isRead: false,
+    });
     res.json({ notification, unreadCount });
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được thông báo", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được thông báo", error: err.message });
   }
 };
 
 export const markAllNotificationsRead = async (req, res) => {
   try {
-    await Notification.updateMany({ user: req.userId, isRead: false }, { isRead: true, readAt: new Date() });
+    await Notification.updateMany(
+      { user: req.userId, isRead: false },
+      { isRead: true, readAt: new Date() }
+    );
     res.json({ success: true, unreadCount: 0 });
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được thông báo", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được thông báo", error: err.message });
   }
 };

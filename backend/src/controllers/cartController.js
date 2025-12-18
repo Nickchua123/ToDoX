@@ -15,7 +15,9 @@ const normalizeOptions = (options = {}) => {
 };
 
 const sameOptions = (a = {}, b = {}) => {
-  return (a.color || "") === (b.color || "") && (a.size || "") === (b.size || "");
+  return (
+    (a.color || "") === (b.color || "") && (a.size || "") === (b.size || "")
+  );
 };
 
 const getOrCreateCart = async (userId) => {
@@ -38,7 +40,9 @@ export const getCart = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json(cart);
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được giỏ hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được giỏ hàng", error: err.message });
   }
 };
 
@@ -50,17 +54,23 @@ export const addItem = async (req, res) => {
       return res.status(400).json({ message: "variantId không hợp lệ" });
     }
     if (variantId) {
-      const variant = await Variant.findOne({ _id: variantId, product: product._id });
-      if (!variant) return res.status(400).json({ message: "Biến thể không tồn tại" });
+      const variant = await Variant.findOne({
+        _id: variantId,
+        product: product._id,
+      });
+      if (!variant)
+        return res.status(400).json({ message: "Biến thể không tồn tại" });
     }
-    if (quantity <= 0) return res.status(400).json({ message: "Số lượng phải > 0" });
+    if (quantity <= 0)
+      return res.status(400).json({ message: "Số lượng phải > 0" });
 
     const cart = await getOrCreateCart(req.userId);
     const normalizedOptions = normalizeOptions(options);
     const idx = cart.items.findIndex(
       (item) =>
         item.product.toString() === productId &&
-        ((variantId && item.variant?.toString() === variantId) || (!variantId && !item.variant)) &&
+        ((variantId && item.variant?.toString() === variantId) ||
+          (!variantId && !item.variant)) &&
         sameOptions(item.options, normalizedOptions)
     );
     if (idx >= 0) {
@@ -80,7 +90,9 @@ export const addItem = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json(cart);
   } catch (err) {
-    res.status(400).json({ message: err.message || "Không thêm được sản phẩm" });
+    res
+      .status(400)
+      .json({ message: err.message || "Không thêm được sản phẩm" });
   }
 };
 
@@ -101,7 +113,9 @@ export const updateItem = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json(cart);
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được item", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được item", error: err.message });
   }
 };
 
@@ -118,7 +132,9 @@ export const removeItem = async (req, res) => {
     await cart.populate("items.variant", "label priceDelta");
     res.json({ message: "Item removed", remaining: cart.items });
   } catch (err) {
-    res.status(500).json({ message: "Không xóa được item", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xóa được item", error: err.message });
   }
 };
 
@@ -130,6 +146,8 @@ export const clearCart = async (req, res) => {
     await cart.save();
     res.json({ message: "Cart cleared", items: [] });
   } catch (err) {
-    res.status(500).json({ message: "Không làm rỗng giỏ hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không làm rỗng giỏ hàng", error: err.message });
   }
 };

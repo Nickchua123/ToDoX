@@ -14,14 +14,21 @@ const ensureConfig = () => {
     VNPAY_RETURN_URL,
   } = process.env;
 
-  if (!VNPAY_TMN_CODE?.trim() ||
-      !VNPAY_HASH_SECRET?.trim() ||
-      !VNPAY_BASE_URL?.trim() ||
-      !VNPAY_RETURN_URL?.trim()) {
+  if (
+    !VNPAY_TMN_CODE?.trim() ||
+    !VNPAY_HASH_SECRET?.trim() ||
+    !VNPAY_BASE_URL?.trim() ||
+    !VNPAY_RETURN_URL?.trim()
+  ) {
     throw new Error("Thiếu cấu hình VNPAY trong file .env");
   }
 
-  return { VNPAY_TMN_CODE, VNPAY_HASH_SECRET, VNPAY_BASE_URL, VNPAY_RETURN_URL };
+  return {
+    VNPAY_TMN_CODE,
+    VNPAY_HASH_SECRET,
+    VNPAY_BASE_URL,
+    VNPAY_RETURN_URL,
+  };
 };
 
 const maskSecret = (value = "") => {
@@ -31,16 +38,14 @@ const maskSecret = (value = "") => {
 };
 
 const logDebug = (...args) => {
-  const enabled = String(process.env.VNPAY_DEBUG || "").toLowerCase() === "true";
+  const enabled =
+    String(process.env.VNPAY_DEBUG || "").toLowerCase() === "true";
   if (!enabled) return;
   console.log("[VNPAY]", ...args);
 };
 
 const formatDate = (date = new Date()) =>
-  date
-    .toISOString()
-    .replace(/[-:T]/g, "")
-    .slice(0, 14);
+  date.toISOString().replace(/[-:T]/g, "").slice(0, 14);
 
 const normalizeIp = (ip = "") => {
   if (!ip) return "127.0.0.1";
@@ -59,7 +64,11 @@ const getClientIp = (req) => {
     const first = forwarded.split(",").map((s) => s.trim())[0];
     return normalizeIp(first);
   }
-  const raw = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || "127.0.0.1";
+  const raw =
+    req.ip ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
+    "127.0.0.1";
   return normalizeIp(raw);
 };
 
@@ -69,7 +78,8 @@ const generateTxnRef = (orderId) => `${orderId}-${randomUUID()}`;
 const createVnpayClient = () => {
   const { VNPAY_TMN_CODE, VNPAY_HASH_SECRET, VNPAY_BASE_URL } = ensureConfig();
   const parsed = new URL(VNPAY_BASE_URL);
-  const paymentEndpoint = parsed.pathname.replace(/^\/+/, "") || "paymentv2/vpcpay.html";
+  const paymentEndpoint =
+    parsed.pathname.replace(/^\/+/, "") || "paymentv2/vpcpay.html";
   return new VNPay({
     tmnCode: VNPAY_TMN_CODE,
     secureSecret: VNPAY_HASH_SECRET,
@@ -102,7 +112,12 @@ export const createVnpayPayment = async (req, res) => {
       return res.status(400).json({ message: "Tổng tiền không hợp lệ" });
     }
 
-    const { VNPAY_TMN_CODE, VNPAY_HASH_SECRET, VNPAY_BASE_URL, VNPAY_RETURN_URL } = ensureConfig();
+    const {
+      VNPAY_TMN_CODE,
+      VNPAY_HASH_SECRET,
+      VNPAY_BASE_URL,
+      VNPAY_RETURN_URL,
+    } = ensureConfig();
     logDebug("env", {
       tmnCode: VNPAY_TMN_CODE,
       baseUrl: VNPAY_BASE_URL,
@@ -114,7 +129,9 @@ export const createVnpayPayment = async (req, res) => {
 
     // Ngăn tạo nhiều link thanh toán
     if (order.paymentRef) {
-      return res.status(409).json({ message: "Đơn hàng đã có giao dịch thanh toán" });
+      return res
+        .status(409)
+        .json({ message: "Đơn hàng đã có giao dịch thanh toán" });
     }
 
     const txnRef = generateTxnRef(order._id);
@@ -165,7 +182,9 @@ export const verifyVnpayReturn = async (req, res) => {
 
     const vnpayClient = createVnpayClient();
     const { orderId: injectedOrderId, ...vnPayQuery } = req.query;
-    const verification = vnpayClient.verifyReturnUrl(vnPayQuery, { withHash: true });
+    const verification = vnpayClient.verifyReturnUrl(vnPayQuery, {
+      withHash: true,
+    });
     logDebug("verify result", verification);
 
     if (!verification.isVerified) {
