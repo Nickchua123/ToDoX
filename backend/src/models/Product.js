@@ -6,7 +6,11 @@ const productSchema = new mongoose.Schema(
     slug: { type: String, required: true, unique: true },
     description: { type: String, default: "" }, // mô tả ngắn
     detail: { type: String, default: "" }, // mô tả dài (thông tin sản phẩm)
-    category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
     price: { type: Number, required: true },
     oldPrice: { type: Number }, // giá gốc
     stock: { type: Number, default: 0 },

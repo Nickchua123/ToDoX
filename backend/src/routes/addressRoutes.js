@@ -1,6 +1,12 @@
 ﻿import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { listAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress } from "../controllers/addressController.js";
+import {
+  listAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
+} from "../controllers/addressController.js";
 
 const router = express.Router();
 

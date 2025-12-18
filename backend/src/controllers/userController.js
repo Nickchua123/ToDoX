@@ -7,11 +7,16 @@ const sanitizeName = (name) => String(name || "").trim();
 
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password -resetPasswordToken -resetPasswordExpires");
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const user = await User.findById(req.userId).select(
+      "-password -resetPasswordToken -resetPasswordExpires"
+    );
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được thông tin", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được thông tin", error: err.message });
   }
 };
 
@@ -64,15 +69,15 @@ const normalizeProfilePayload = (body = {}) => {
 export const updateMe = async (req, res) => {
   try {
     const update = normalizeProfilePayload(req.body);
-    const user = await User.findByIdAndUpdate(req.userId, update, { new: true }).select(
-      "-password -resetPasswordToken -resetPasswordExpires"
-    );
+    const user = await User.findByIdAndUpdate(req.userId, update, {
+      new: true,
+    }).select("-password -resetPasswordToken -resetPasswordExpires");
     res.json(user);
   } catch (err) {
-    const message = err.message === "Tên quá ngắn"
-      || err.message?.includes("không hợp lệ")
-      ? err.message
-      : "Không cập nhật được thông tin";
+    const message =
+      err.message === "Tên quá ngắn" || err.message?.includes("không hợp lệ")
+        ? err.message
+        : "Không cập nhật được thông tin";
     res.status(message === err.message ? 400 : 500).json({ message });
   }
 };
@@ -109,17 +114,27 @@ export const listUsers = async (req, res) => {
 
     res.json({ total, page: Number(page) || 1, items: normalized });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được danh sách người dùng", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Không lấy được danh sách người dùng",
+        error: err.message,
+      });
   }
 };
 
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select("name email role createdAt");
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const user = await User.findById(req.params.userId).select(
+      "name email role createdAt"
+    );
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được người dùng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được người dùng", error: err.message });
   }
 };
 
@@ -127,19 +142,24 @@ export const updateUser = async (req, res) => {
   try {
     const update = { ...normalizeProfilePayload(req.body) };
     if (req.body?.email) {
-      if (!validator.isEmail(String(req.body.email))) return res.status(400).json({ message: "Email không hợp lệ" });
+      if (!validator.isEmail(String(req.body.email)))
+        return res.status(400).json({ message: "Email không hợp lệ" });
       update.email = String(req.body.email).trim().toLowerCase();
     }
     if (typeof req.body?.role !== "undefined") {
       const role = String(req.body.role).toLowerCase();
       const allowedRoles = ["admin", "staff", "customer"];
-      if (!allowedRoles.includes(role)) return res.status(400).json({ message: "Role không hợp lệ" });
+      if (!allowedRoles.includes(role))
+        return res.status(400).json({ message: "Role không hợp lệ" });
       update.role = role;
     }
-    const user = await User.findByIdAndUpdate(req.params.userId, update, { new: true }).select(
+    const user = await User.findByIdAndUpdate(req.params.userId, update, {
+      new: true,
+    }).select(
       "username name email phone gender dateOfBirth avatar updatedAt role"
     );
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json(user);
   } catch (err) {
     const message =
@@ -159,10 +179,16 @@ export const requestDeleteAccount = async (req, res) => {
       { deleteRequestedAt: new Date() },
       { new: true }
     ).select("deleteRequestedAt");
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    res.json({ message: "Đã ghi nhận yêu cầu xóa tài khoản", deleteRequestedAt: user.deleteRequestedAt });
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    res.json({
+      message: "Đã ghi nhận yêu cầu xóa tài khoản",
+      deleteRequestedAt: user.deleteRequestedAt,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Không gửi được yêu cầu xóa", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không gửi được yêu cầu xóa", error: err.message });
   }
 };
 
@@ -173,31 +199,49 @@ export const cancelDeleteAccount = async (req, res) => {
       { deleteRequestedAt: null },
       { new: true }
     ).select("deleteRequestedAt");
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    res.json({ message: "Đã hủy yêu cầu xóa tài khoản", deleteRequestedAt: user.deleteRequestedAt });
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    res.json({
+      message: "Đã hủy yêu cầu xóa tài khoản",
+      deleteRequestedAt: user.deleteRequestedAt,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Không hủy được yêu cầu xóa", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không hủy được yêu cầu xóa", error: err.message });
   }
 };
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, username, phone, gender, role } = req.body || {};
+    const { name, email, password, username, phone, gender, role } =
+      req.body || {};
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Vui lòng nhập tên, email và mật khẩu" });
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập tên, email và mật khẩu" });
     }
     const normalizedEmail = String(email).trim().toLowerCase();
-    if (!validator.isEmail(normalizedEmail)) return res.status(400).json({ message: "Email không hợp lệ" });
+    if (!validator.isEmail(normalizedEmail))
+      return res.status(400).json({ message: "Email không hợp lệ" });
     const existingEmail = await User.exists({ email: normalizedEmail });
-    if (existingEmail) return res.status(409).json({ message: "Email đã tồn tại" });
-    const normalizedUsername = username ? String(username).trim() : normalizedEmail.split("@")[0];
+    if (existingEmail)
+      return res.status(409).json({ message: "Email đã tồn tại" });
+    const normalizedUsername = username
+      ? String(username).trim()
+      : normalizedEmail.split("@")[0];
     if (normalizedUsername.length < 3) {
       return res.status(400).json({ message: "Username tối thiểu 3 ký tự" });
     }
-    const existingUsername = await User.exists({ username: normalizedUsername });
-    if (existingUsername) return res.status(409).json({ message: "Username đã tồn tại" });
+    const existingUsername = await User.exists({
+      username: normalizedUsername,
+    });
+    if (existingUsername)
+      return res.status(409).json({ message: "Username đã tồn tại" });
     const passwordHash = await bcrypt.hash(String(password), 10);
-    const normalizedRole = ["admin", "staff", "customer"].includes(role) ? role : "customer";
+    const normalizedRole = ["admin", "staff", "customer"].includes(role)
+      ? role
+      : "customer";
     const user = await User.create({
       name: sanitizeName(name),
       email: normalizedEmail,
@@ -211,7 +255,9 @@ export const createUser = async (req, res) => {
     delete safe.password;
     res.status(201).json(safe);
   } catch (err) {
-    res.status(500).json({ message: "Không tạo được người dùng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không tạo được người dùng", error: err.message });
   }
 };
 
@@ -219,9 +265,12 @@ export const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
     const removed = await User.findByIdAndDelete(userId);
-    if (!removed) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    if (!removed)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.json({ message: "Đã xóa người dùng" });
   } catch (err) {
-    res.status(500).json({ message: "Không xóa được người dùng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xóa được người dùng", error: err.message });
   }
 };

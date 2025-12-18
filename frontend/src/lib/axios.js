@@ -1,7 +1,13 @@
 import axios from "axios";
 
+// In production (Render), FE and BE thường chạy chung domain => dùng "/api".
+// Khi dev, mặc định trỏ localhost:5001; có thể override bằng VITE_API_BASE_URL.
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:5001/api" : "/api");
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api",
+  baseURL,
   timeout: 10000,
   withCredentials: true,
   xsrfCookieName: "XSRF-TOKEN",
@@ -27,25 +33,23 @@ api.interceptors.response.use(
       }
     }
 
-    // 401 -> try refresh flow once, then redirect to login on failure
-    if (
-      status === 401 &&
-      !cfg._retryRefresh &&
-      !cfg.url?.includes("/auth/refresh") &&
-      !cfg.url?.includes("/auth/login")
-    ) {
-      try {
-        cfg._retryRefresh = true;
-        // Ensure CSRF token cookie/header is present for POST /auth/refresh
-        await api.get("/auth/csrf-token");
-        await api.post("/auth/refresh");
-        return api(cfg);
-      } catch (refreshErr) {
-        console.warn("Refresh token attempt failed", refreshErr);
-      }
-    }
-
+    // 401 -> try refresh flow once (trừ khi chủ động skip), rồi redirect login nếu không skip
     if (status === 401 && !skipAuthRedirect) {
+      if (
+        !cfg._retryRefresh &&
+        !cfg.url?.includes("/auth/refresh") &&
+        !cfg.url?.includes("/auth/login")
+      ) {
+        try {
+          cfg._retryRefresh = true;
+          // Ensure CSRF token cookie/header is present for POST /auth/refresh
+          await api.get("/auth/csrf-token");
+          await api.post("/auth/refresh");
+          return api(cfg);
+        } catch (refreshErr) {
+          console.warn("Refresh token attempt failed", refreshErr);
+        }
+      }
       try {
         sessionStorage.setItem("postLoginRedirect", window.location.pathname + window.location.search);
       } catch (storageErr) {

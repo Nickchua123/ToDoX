@@ -8,38 +8,48 @@ export const getAdminSummary = async (req, res) => {
     const now = new Date();
     const since = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
 
-    const [totalUsers, totalProducts, totalOrders, revenueAgg, statusAgg, recentOrders, trendAgg, pendingReviews, lowStockProducts, pendingOrders] =
-      await Promise.all([
-        User.countDocuments(),
-        Product.countDocuments(),
-        Order.countDocuments(),
-        Order.aggregate([
-          { $match: { status: "delivered" } },
-          { $group: { _id: null, totalRevenue: { $sum: "$total" } } },
-        ]),
-        Order.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-        Order.find()
-          .sort({ createdAt: -1 })
-          .limit(6)
-          .select("total status createdAt")
-          .populate("user", "name email"),
-        Order.aggregate([
-          { $match: { status: "delivered", createdAt: { $gte: since } } },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-              },
-              revenue: { $sum: "$total" },
-              orders: { $sum: 1 },
+    const [
+      totalUsers,
+      totalProducts,
+      totalOrders,
+      revenueAgg,
+      statusAgg,
+      recentOrders,
+      trendAgg,
+      pendingReviews,
+      lowStockProducts,
+      pendingOrders,
+    ] = await Promise.all([
+      User.countDocuments(),
+      Product.countDocuments(),
+      Order.countDocuments(),
+      Order.aggregate([
+        { $match: { status: "delivered" } },
+        { $group: { _id: null, totalRevenue: { $sum: "$total" } } },
+      ]),
+      Order.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      Order.find()
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select("total status createdAt")
+        .populate("user", "name email"),
+      Order.aggregate([
+        { $match: { status: "delivered", createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
             },
+            revenue: { $sum: "$total" },
+            orders: { $sum: 1 },
           },
-          { $sort: { _id: 1 } },
-        ]),
-        Review.countDocuments({ approved: false }),
-        Product.countDocuments({ stock: { $lte: 10 } }),
-        Order.countDocuments({ status: { $in: ["pending", "processing"] } }),
-      ]);
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      Review.countDocuments({ approved: false }),
+      Product.countDocuments({ stock: { $lte: 10 } }),
+      Order.countDocuments({ status: { $in: ["pending", "processing"] } }),
+    ]);
 
     const totalRevenue = revenueAgg?.[0]?.totalRevenue || 0;
     const statusCounts = statusAgg.reduce((acc, item) => {
@@ -81,6 +91,11 @@ export const getAdminSummary = async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được dữ liệu tổng quan", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Không lấy được dữ liệu tổng quan",
+        error: err.message,
+      });
   }
 };

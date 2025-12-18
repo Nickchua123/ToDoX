@@ -11,7 +11,12 @@ export const listFavorites = async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(favorites);
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được danh sách yêu thích", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Không lấy được danh sách yêu thích",
+        error: err.message,
+      });
   }
 };
 
@@ -22,7 +27,8 @@ export const addFavorite = async (req, res) => {
       return res.status(400).json({ message: "productId không hợp lệ" });
     }
     const product = await Product.findById(productId).select("_id");
-    if (!product) return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    if (!product)
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     const fav = await Favorite.findOneAndUpdate(
       { user: req.userId, product: productId },
       { user: req.userId, product: productId },
@@ -31,7 +37,9 @@ export const addFavorite = async (req, res) => {
     await fav.populate("product", "name price images slug");
     res.status(201).json(fav);
   } catch (err) {
-    res.status(500).json({ message: "Không thêm được yêu thích", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không thêm được yêu thích", error: err.message });
   }
 };
 
@@ -44,6 +52,8 @@ export const removeFavorite = async (req, res) => {
     await Favorite.findOneAndDelete({ user: req.userId, product: productId });
     res.json({ message: "Đã xóa khỏi yêu thích" });
   } catch (err) {
-    res.status(500).json({ message: "Không xóa được yêu thích", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xóa được yêu thích", error: err.message });
   }
 };

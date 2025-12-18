@@ -1,6 +1,12 @@
 ﻿import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { getCart, addItem, updateItem, removeItem, clearCart } from "../controllers/cartController.js";
+import {
+  getCart,
+  addItem,
+  updateItem,
+  removeItem,
+  clearCart,
+} from "../controllers/cartController.js";
 
 const router = express.Router();
 

@@ -97,7 +97,10 @@ const createGHNShipment = async ({
   const packageWeight =
     Number(shippingPackage.weight ?? shippingSelection.weight) ||
     Number(shippingSelection.total_weight) ||
-    orderItems.reduce((sum, item) => sum + Number(item.quantity || 0) * 500, 0) ||
+    orderItems.reduce(
+      (sum, item) => sum + Number(item.quantity || 0) * 500,
+      0
+    ) ||
     500;
   const payload = {
     ...defaultPickupInfo(),
@@ -148,7 +151,8 @@ const enrichItems = async (items) => {
     options: normalizeOptions(item.options || {}),
   }));
   const productIds = normalized.map((i) => i.productId).filter(isValidObjectId);
-  if (productIds.length !== normalized.length) throw new Error("productId không hợp lệ");
+  if (productIds.length !== normalized.length)
+    throw new Error("productId không hợp lệ");
   const products = await Product.find({
     _id: productIds,
     isPublished: true,
@@ -159,19 +163,26 @@ const enrichItems = async (items) => {
     const product = productMap.get(item.productId.toString());
     if (!product) throw new Error("Sản phẩm không tồn tại hoặc đã ngừng bán");
     if (item.quantity <= 0) throw new Error("Số lượng phải lớn hơn 0");
-    if (product.stock < item.quantity) throw new Error(`Sản phẩm ${product.name} không đủ hàng`);
+    if (product.stock < item.quantity)
+      throw new Error(`Sản phẩm ${product.name} không đủ hàng`);
     return {
       product: product._id,
       variant: item.variant ? item.variant : undefined,
       name: product.name,
       price: product.price,
       quantity: item.quantity,
-      image: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : undefined,
+      image:
+        Array.isArray(product.images) && product.images.length > 0
+          ? product.images[0]
+          : undefined,
       options: item.options,
     };
   });
 
-  const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = orderItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   return { orderItems, total, products: productMap };
 };
 
@@ -194,10 +205,14 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Địa chỉ không hợp lệ" });
     }
     const address = await Address.findOne({ _id: addressId, user: req.userId });
-    if (!address) return res.status(400).json({ message: "Không tìm thấy địa chỉ" });
+    if (!address)
+      return res.status(400).json({ message: "Không tìm thấy địa chỉ" });
 
     const { orderItems } = await enrichItems(items);
-    const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = orderItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
     const finalShipping = Number(shippingFee) || 0;
     let finalDiscount = Number(discount) || 0;
     let couponPercent = 0;
@@ -206,13 +221,17 @@ export const createOrder = async (req, res) => {
     if (couponCode) {
       const normalizedCode = String(couponCode).trim().toUpperCase();
       const coupon = await Coupon.findOne({ code: normalizedCode });
-      if (!coupon) return res.status(400).json({ message: "Mã giảm giá không tồn tại" });
-      if (!coupon.active) return res.status(400).json({ message: "Mã giảm giá đã bị vô hiệu" });
+      if (!coupon)
+        return res.status(400).json({ message: "Mã giảm giá không tồn tại" });
+      if (!coupon.active)
+        return res.status(400).json({ message: "Mã giảm giá đã bị vô hiệu" });
       if (coupon.expiresAt && coupon.expiresAt < new Date()) {
         return res.status(400).json({ message: "Mã giảm giá đã hết hạn" });
       }
       if (coupon.maxUses && coupon.used >= coupon.maxUses) {
-        return res.status(400).json({ message: "Mã giảm giá đã hết lượt dùng" });
+        return res
+          .status(400)
+          .json({ message: "Mã giảm giá đã hết lượt dùng" });
       }
       couponPercent = Number(coupon.discountPercent) || 0;
       finalDiscount = Math.round((subtotal * couponPercent) / 100);
@@ -240,10 +259,14 @@ export const createOrder = async (req, res) => {
       notes,
       paymentMethod: paymentMethod || "cod",
       shippingProvider,
-      shippingServiceName: shippingSelection.serviceName || shippingSelection.short_name,
+      shippingServiceName:
+        shippingSelection.serviceName || shippingSelection.short_name,
       shippingServiceCode: shippingSelection.serviceCode,
-      shippingServiceTypeId: shippingSelection.serviceTypeId || shippingSelection.service_type_id,
-      shippingClientOrderCode: shippingSelection.clientOrderCode || shippingSelection.client_order_code,
+      shippingServiceTypeId:
+        shippingSelection.serviceTypeId || shippingSelection.service_type_id,
+      shippingClientOrderCode:
+        shippingSelection.clientOrderCode ||
+        shippingSelection.client_order_code,
       shippingStatus: shippingProvider === "ghn" ? "booking" : undefined,
       shippingMeta: {
         ...shippingSelection,
@@ -254,12 +277,18 @@ export const createOrder = async (req, res) => {
 
     await Promise.all(
       orderItems.map((item) =>
-        Product.updateOne({ _id: item.product }, { $inc: { stock: -item.quantity } })
+        Product.updateOne(
+          { _id: item.product },
+          { $inc: { stock: -item.quantity } }
+        )
       )
     );
 
     if (appliedCouponCode) {
-      await Coupon.updateOne({ code: appliedCouponCode }, { $inc: { used: 1 } }).catch(() => {});
+      await Coupon.updateOne(
+        { code: appliedCouponCode },
+        { $inc: { used: 1 } }
+      ).catch(() => {});
     }
 
     if (shippingProvider === "ghn") {
@@ -333,7 +362,9 @@ export const listMyOrders = async (req, res) => {
 
     res.json({ total, page: pageNumber, items });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được đơn hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được đơn hàng", error: err.message });
   }
 };
 
@@ -358,19 +389,26 @@ export const listOrders = async (req, res) => {
 
     res.json({ total, page: Number(page) || 1, items });
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được danh sách đơn hàng", error: err.message });
+    res
+      .status(500)
+      .json({
+        message: "Không lấy được danh sách đơn hàng",
+        error: err.message,
+      });
   }
 };
 
 export const getOrderDetail = async (req, res) => {
   try {
     const { orderId } = req.params;
-    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!isValidObjectId(orderId))
+      return res.status(400).json({ message: "ID không hợp lệ" });
     const order = await Order.findById(orderId)
       .populate("items.product", "name images price")
       .populate("user", "name email")
       .populate("address");
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (!order)
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
 
     const isOwner = order.user?._id?.toString() === req.userId;
     const admin = await isAdminUser(req.userId);
@@ -380,7 +418,9 @@ export const getOrderDetail = async (req, res) => {
 
     res.json(order);
   } catch (err) {
-    res.status(500).json({ message: "Không lấy được đơn hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không lấy được đơn hàng", error: err.message });
   }
 };
 
@@ -388,22 +428,40 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body || {};
-    const allowed = ["pending", "processing", "shipped", "delivered", "cancelled", "refunded"];
-    if (!allowed.includes(status)) return res.status(400).json({ message: "Trạng thái không hợp lệ" });
-    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    const allowed = [
+      "pending",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "refunded",
+    ];
+    if (!allowed.includes(status))
+      return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+    if (!isValidObjectId(orderId))
+      return res.status(400).json({ message: "ID không hợp lệ" });
 
-    const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { status },
+      { new: true }
+    );
+    if (!order)
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     res.json(order);
     createNotification({
       user: order.user,
       type: NotificationType.ORDER,
       title: "Đơn hàng được cập nhật",
-      message: `Đơn hàng #${order._id} hiện ở trạng thái ${STATUS_LABELS[status] || status}.`,
+      message: `Đơn hàng #${order._id} hiện ở trạng thái ${
+        STATUS_LABELS[status] || status
+      }.`,
       data: { orderId: order._id, status },
     });
   } catch (err) {
-    res.status(500).json({ message: "Không cập nhật được đơn hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không cập nhật được đơn hàng", error: err.message });
   }
 };
 
@@ -411,13 +469,18 @@ export const cancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { reason } = req.body || {};
-    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!isValidObjectId(orderId))
+      return res.status(400).json({ message: "ID không hợp lệ" });
     const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (!order)
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     const isOwner = order.user?.toString() === req.userId;
-    if (!isOwner) return res.status(403).json({ message: "Không có quyền hủy" });
+    if (!isOwner)
+      return res.status(403).json({ message: "Không có quyền hủy" });
     if (!["pending", "processing"].includes(order.status)) {
-      return res.status(400).json({ message: "Không thể hủy ở trạng thái hiện tại" });
+      return res
+        .status(400)
+        .json({ message: "Không thể hủy ở trạng thái hiện tại" });
     }
 
     order.status = "cancelled";
@@ -435,7 +498,10 @@ export const cancelOrder = async (req, res) => {
     }
     await Promise.all(
       order.items.map((item) =>
-        Product.updateOne({ _id: item.product }, { $inc: { stock: item.quantity } })
+        Product.updateOne(
+          { _id: item.product },
+          { $inc: { stock: item.quantity } }
+        )
       )
     );
     res.json(order);
@@ -443,11 +509,15 @@ export const cancelOrder = async (req, res) => {
       user: order.user,
       type: NotificationType.ORDER,
       title: "Đơn hàng đã được hủy",
-      message: `Bạn đã hủy đơn hàng #${order._id}${reason ? ` (${reason})` : ""}.`,
+      message: `Bạn đã hủy đơn hàng #${order._id}${
+        reason ? ` (${reason})` : ""
+      }.`,
       data: { orderId: order._id, status: order.status },
     });
   } catch (err) {
-    res.status(500).json({ message: "Không hủy được đơn hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không hủy được đơn hàng", error: err.message });
   }
 };
 
@@ -455,16 +525,23 @@ export const requestCancelOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { reason } = req.body || {};
-    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!isValidObjectId(orderId))
+      return res.status(400).json({ message: "ID không hợp lệ" });
     const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (!order)
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     const isOwner = order.user?.toString() === req.userId;
-    if (!isOwner) return res.status(403).json({ message: "Không có quyền yêu cầu hủy" });
+    if (!isOwner)
+      return res.status(403).json({ message: "Không có quyền yêu cầu hủy" });
     if (order.status !== "processing") {
-      return res.status(400).json({ message: "Chỉ có thể gửi yêu cầu khi đơn đang xử lý" });
+      return res
+        .status(400)
+        .json({ message: "Chỉ có thể gửi yêu cầu khi đơn đang xử lý" });
     }
     if (order.cancellationRequested) {
-      return res.status(400).json({ message: "Bạn đã gửi yêu cầu hủy trước đó" });
+      return res
+        .status(400)
+        .json({ message: "Bạn đã gửi yêu cầu hủy trước đó" });
     }
     order.cancellationRequested = true;
     order.cancellationRequestedAt = new Date();
@@ -472,20 +549,27 @@ export const requestCancelOrder = async (req, res) => {
     await order.save();
     res.json(order);
   } catch (err) {
-    res.status(500).json({ message: "Không gửi được yêu cầu hủy", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không gửi được yêu cầu hủy", error: err.message });
   }
 };
 
 export const confirmOrderDelivery = async (req, res) => {
   try {
     const { orderId } = req.params;
-    if (!isValidObjectId(orderId)) return res.status(400).json({ message: "ID không hợp lệ" });
+    if (!isValidObjectId(orderId))
+      return res.status(400).json({ message: "ID không hợp lệ" });
     const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    if (!order)
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     const isOwner = order.user?.toString() === req.userId;
-    if (!isOwner) return res.status(403).json({ message: "Không có quyền xác nhận" });
+    if (!isOwner)
+      return res.status(403).json({ message: "Không có quyền xác nhận" });
     if (order.status !== "shipped") {
-      return res.status(400).json({ message: "Chỉ xác nhận khi đơn đang giao" });
+      return res
+        .status(400)
+        .json({ message: "Chỉ xác nhận khi đơn đang giao" });
     }
 
     order.status = "delivered";
@@ -501,6 +585,8 @@ export const confirmOrderDelivery = async (req, res) => {
       data: { orderId: order._id, status: order.status },
     });
   } catch (err) {
-    res.status(500).json({ message: "Không xác nhận được đơn hàng", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Không xác nhận được đơn hàng", error: err.message });
   }
 };

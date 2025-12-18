@@ -1,6 +1,10 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { addFavorite, listFavorites, removeFavorite } from "../controllers/favoriteController.js";
+import {
+  addFavorite,
+  listFavorites,
+  removeFavorite,
+} from "../controllers/favoriteController.js";
 
 const router = express.Router();
 

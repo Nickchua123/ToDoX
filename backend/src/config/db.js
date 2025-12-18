@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 // lệnh lọc an toàn cho mongoose
-mongoose.set("sanitizeFilter", true); 
+mongoose.set("sanitizeFilter", true);
 
 // kết nối CSDL MongoDB
 export const connectDB = async () => {
@@ -10,7 +10,6 @@ export const connectDB = async () => {
     console.log("Liên kết CSDL thành công!");
   } catch (error) {
     console.error("Lỗi khi kết nối CSDL:", error);
-    process.exit(1); 
+    process.exit(1);
   }
 };
-

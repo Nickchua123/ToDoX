@@ -1,5 +1,11 @@
 import express from "express";
-import { listNews, getNews, createNews, updateNews, deleteNews } from "../controllers/newsController.js";
+import {
+  listNews,
+  getNews,
+  createNews,
+  updateNews,
+  deleteNews,
+} from "../controllers/newsController.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/admin.js";
 

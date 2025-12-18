@@ -22,6 +22,10 @@ export function CartProvider({ children }) {
   };
 
   useEffect(() => {
+    if (!user) {
+      setCartData({ cart: null, subtotal: 0 });
+      return;
+    }
     loadCart();
   }, [user?._id]);
 
