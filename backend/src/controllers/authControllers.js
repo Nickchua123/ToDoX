@@ -6,12 +6,14 @@ import User from "../models/User.js";
 import PendingRegistration from "../models/PendingRegistration.js";
 import { sendMail } from "../utils/mailer.js";
 import { isAdminUser } from "../middleware/admin.js";
+
 // Kiểm tra độ mạnh mật khẩu
 const isStrongPassword = (pwd) => {
   const s = String(pwd || "");
   if (s.length < 12) return false;
   return /[A-Z]/.test(s) && /\d/.test(s) && /[^A-Za-z0-9]/.test(s);
 };
+
 const normalizeUsername = (value, fallback = "") => {
   const base =
     String(value || "")
@@ -21,8 +23,10 @@ const normalizeUsername = (value, fallback = "") => {
       .replace(/^-+|-+$/g, "") || fallback;
   return base || `user${Date.now()}`;
 };
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const isProd = process.env.NODE_ENV === "production";
+
 // Dev (kể cả IP LAN): dùng SameSite=lax để cookie hoạt động qua HTTP
 const cookieSameSite = isProd ? "none" : "lax";
 const COOKIE_OPTIONS = {
@@ -30,11 +34,13 @@ const COOKIE_OPTIONS = {
   sameSite: cookieSameSite,
   secure: isProd,
 };
+
 const XSRF_COOKIE_OPTIONS = {
   httpOnly: false,
   sameSite: cookieSameSite,
   secure: isProd,
 };
+
 // Access/Refresh tokens
 const ACCESS_COOKIE = "access_token";
 const REFRESH_COOKIE = "refresh_token";
