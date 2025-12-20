@@ -33,7 +33,7 @@ Phân công:
 
 * Dữ liệu: User Schema, Validation
 * Bảo vệ: Password Policy, Turnstile
-* Xác thực: JWT, Refresh Token, OTP
+* Xác thực: JWT, Refresh, Access Token, OTP
 * Thiết kế và viết code frontend
 
 ## Hướng dẫn sử dụng
