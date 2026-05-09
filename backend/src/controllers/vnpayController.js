@@ -6,13 +6,25 @@ import Order from "../models/Order.js";
 
 const SECURE_HASH_TYPE = "SHA512";
 
+const trimTrailingSlash = (value = "") => String(value).replace(/\/+$/, "");
+
+const resolveReturnUrl = () => {
+  const configured = process.env.VNPAY_RETURN_URL?.trim();
+  if (configured) return trimTrailingSlash(configured);
+
+  const frontendUrl = process.env.FRONTEND_URL?.trim();
+  if (!frontendUrl) return "";
+
+  return `${trimTrailingSlash(frontendUrl)}/payment-result`;
+};
+
 const ensureConfig = () => {
   const {
     VNPAY_TMN_CODE,
     VNPAY_HASH_SECRET,
     VNPAY_BASE_URL,
-    VNPAY_RETURN_URL,
   } = process.env;
+  const VNPAY_RETURN_URL = resolveReturnUrl();
 
   if (
     !VNPAY_TMN_CODE?.trim() ||
@@ -29,6 +41,12 @@ const ensureConfig = () => {
     VNPAY_BASE_URL,
     VNPAY_RETURN_URL,
   };
+};
+
+const buildReturnUrl = (baseUrl, orderId) => {
+  const url = new URL(baseUrl);
+  url.searchParams.set("orderId", orderId);
+  return url.toString();
 };
 
 const maskSecret = (value = "") => {
@@ -141,7 +159,7 @@ export const createVnpayPayment = async (req, res) => {
       vnp_OrderInfo: `Thanh toan don hang ${order._id}`,
       vnp_OrderType: ProductCode.Other,
       vnp_Amount: total,
-      vnp_ReturnUrl: `${VNPAY_RETURN_URL}?orderId=${order._id}`,
+      vnp_ReturnUrl: buildReturnUrl(VNPAY_RETURN_URL, order._id),
       vnp_IpAddr: getClientIp(req),
       vnp_Locale: VnpLocale.VN,
       vnp_CreateDate: dateFormat(new Date(), "yyyyMMddHHmmss"),

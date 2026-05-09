@@ -11,7 +11,6 @@ import helmet from "helmet";
 import csurf from "csurf";
 import dns from "dns";
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -51,37 +50,43 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const API_URL = process.env.API_URL || `http://localhost:${PORT}`;
 
 if (!process.env.JWT_SECRET) {
-  console.error("[BOOT] Missing JWT_SECRET. Set it in backend/.env or deployment env.");
+  console.error(
+    "[BOOT] Missing JWT_SECRET. Set it in backend/.env or deployment env."
+  );
   process.exit(1);
 }
 if (!process.env.MONGODB_CONNECTIONSTRING) {
-  console.error("[BOOT] Missing MONGODB_CONNECTIONSTRING. Set it in backend/.env or deployment env.");
+  console.error(
+    "[BOOT] Missing MONGODB_CONNECTIONSTRING. Set it in backend/.env or deployment env."
+  );
   process.exit(1);
 }
 if (!process.env.REFRESH_JWT_SECRET) {
-  console.warn("[BOOT] REFRESH_JWT_SECRET not set. Falling back to JWT_SECRET for refresh tokens.");
+  console.warn(
+    "[BOOT] REFRESH_JWT_SECRET not set. Falling back to JWT_SECRET for refresh tokens."
+  );
 }
 
-const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URLS || FRONTEND_URL;
+const rawOrigins =
+  process.env.CORS_ORIGINS || process.env.FRONTEND_URLS || FRONTEND_URL;
 const ALLOWED_ORIGINS = String(rawOrigins)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
 // Allow serving external assets (e.g., Cloudinary) when CSP is applied
-const assetOrigins = String(process.env.ASSET_ORIGINS || "https://res.cloudinary.com")
+const assetOrigins = String(
+  process.env.ASSET_ORIGINS || "https://res.cloudinary.com"
+)
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const allowedOriginSet = new Set([
-  ...ALLOWED_ORIGINS,
-  FRONTEND_URL,
-  API_URL,
-].filter(Boolean));
+const allowedOriginSet = new Set(
+  [...ALLOWED_ORIGINS, FRONTEND_URL, API_URL].filter(Boolean)
+);
 
 const cookieSameSite = isProd ? "none" : "lax";
-
 
 app.set("trust proxy", 1);
 
@@ -94,9 +99,9 @@ app.use((req, res, next) => {
         req.body[key] = xss(req.body[key], {
           whiteList: {},
           stripIgnoreTag: true,
-          stripIgnoreTagBody: ['script', 'style', 'iframe'],
+          stripIgnoreTagBody: ["script", "style", "iframe"],
           onTagAttr: (tag, name) => {
-            if (name.match(/^on/i)) return '';
+            if (name.match(/^on/i)) return "";
           },
         });
       }
@@ -105,13 +110,35 @@ app.use((req, res, next) => {
   next();
 });
 
+// Log body trước/sau sanitize (dev)
+app.use((req, res, next) => {
+  if (req.body && Object.keys(req.body).length) {
+    try {
+      req._rawBodySnapshot = JSON.parse(JSON.stringify(req.body));
+    } catch {
+      req._rawBodySnapshot = req.body;
+    }
+  }
+  next();
+});
+
+app.use(mongoSanitize({ replaceWith: "_" }));
+
+app.use((req, res, next) => {
+  if (req._rawBodySnapshot) {
+    console.warn("[SANITIZE] before", req._rawBodySnapshot);
+    console.warn("[SANITIZE] after", req.body);
+  }
+  next();
+});
+
 app.use(
   mongoSanitize({
-    replaceWith: "_", 
+    replaceWith: "_",
   })
 );
 
-app.use(cookieParser()); 
+app.use(cookieParser());
 
 // Helmet
 app.use(
@@ -119,12 +146,21 @@ app.use(
     contentSecurityPolicy: {
       directives: (() => {
         const connectSources = Array.from(
-          new Set(["'self'", ...ALLOWED_ORIGINS, FRONTEND_URL, API_URL].filter(Boolean))
+          new Set(
+            ["'self'", ...ALLOWED_ORIGINS, FRONTEND_URL, API_URL].filter(
+              Boolean
+            )
+          )
         );
         const base = {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://challenges.cloudflare.com"],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+            "https://challenges.cloudflare.com",
+          ],
           imgSrc: ["'self'", "data:", ...assetOrigins],
           fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
           connectSrc: connectSources,
@@ -149,30 +185,29 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
       if (allowedOriginSet.has(origin)) return cb(null, true);
-      if (!isProd && /^https?:\/\/localhost(?::\d+)?$/.test(origin)) return cb(null, true);
+      if (!isProd && /^https?:\/\/localhost(?::\d+)?$/.test(origin))
+        return cb(null, true);
       return cb(new Error("Not allowed by CORS: " + origin), false);
     },
     credentials: true,
   })
 );
 
-
-
 // CSRF setup
 const csrfProtection = csurf({
   cookie: {
-    httpOnly: false, 
+    httpOnly: false,
     sameSite: cookieSameSite,
-    secure: isProd, 
+    secure: isProd,
   },
 });
 
-// Các đường dẫn bỏ qua CSRF (giảm ma sát đăng nhập; vẫn yêu cầu cookie)
-const CSRF_EXEMPT_PATHS = new Set([
-  "/api/auth/login",
-  "/api/auth/logout",
-  "/api/auth/refresh",
-]);
+// // Các đường dẫn bỏ qua CSRF
+// const CSRF_EXEMPT_PATHS = new Set([
+//   "/api/auth/login",
+//   "/api/auth/logout",
+//   "/api/auth/refresh",
+// ]);
 
 // CSRF
 app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
@@ -185,10 +220,10 @@ app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
   res.json({ csrfToken: token });
 });
 
-// Apply CSRF 
+// Apply CSRF
 app.use("/api", (req, res, next) => {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
-  if (CSRF_EXEMPT_PATHS.has(req.path)) return next();
+  // if (CSRF_EXEMPT_PATHS.has(req.path)) return next();
   return csrfProtection(req, res, next);
 });
 
@@ -234,7 +269,9 @@ app.use((err, req, res, next) => {
 app.use((err, req, res, next) => {
   console.error(err);
   if (!res.headersSent) {
-    res.status(err.status || 500).json({ message: err.message || "Lỗi server" });
+    res
+      .status(err.status || 500)
+      .json({ message: err.message || "Lỗi server" });
   }
 });
 
@@ -251,10 +288,3 @@ connectDB()
     console.error("Kết nối DB thất bại:", err);
     process.exit(1);
   });
-
-
-
-
-
-
-
