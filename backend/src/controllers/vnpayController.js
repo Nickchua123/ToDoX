@@ -172,6 +172,7 @@ export const createVnpayPayment = async (req, res) => {
     }
 
     const paymentUrl = vnpayClient.buildPaymentUrl(params);
+    console.log(paymentUrl);
     logDebug("create payload", params);
 
     // Lưu tạm thông tin thanh toán
